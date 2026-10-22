@@ -8,7 +8,7 @@ const refreshKey = 'soflo_refresh_token';
 export interface SessionUser { id: string; name: string; email: string; phone?: string; points?: number; notificationAppointments?: boolean; notificationPromos?: boolean }
 export interface SessionResult { user: SessionUser; accessToken: string; refreshToken: string }
 export interface Service { id: string; name: string; category: string; description?: string; priceCents?: number; durationMinutes?: number; imageUrl?: string }
-export interface Booking { id: string; serviceName: string; vehicleName: string; scheduledAt: string; status: string; location?: string; paymentStatus?: string }
+export interface Booking { id: string; serviceId?: string; vehicleId?: string; serviceName: string; vehicleName: string; scheduledAt: string; status: string; location?: string; paymentStatus?: string }
 export interface Vehicle { id: string; name: string; year?: number; make?: string; model?: string; color?: string; plate?: string }
 export interface RewardSummary { points: number; rewards: Array<{ id: string; name: string; pointsCost: number; description?: string }>; activity: Array<{ id: string; label: string; delta: number; createdAt: string }>; redemptions: Array<{ id: string; code: string; status: string; name: string }>; referralCode?: string }
 export interface ProtectionRecord { id: string; vehicleName: string; serviceName: string; appliedOn: string; product?: string; coverage?: string; expiresOn?: string }

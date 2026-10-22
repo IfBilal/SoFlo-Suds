@@ -8,10 +8,10 @@ import { endpoints } from '@/lib/api';
 import { palette as c } from '@/theme';
 
 export default function BookingScreen() {
-  const { serviceId } = useLocalSearchParams<{ serviceId?: string }>();
+  const { serviceId, vehicleId: requestedVehicleId } = useLocalSearchParams<{ serviceId?: string; vehicleId?: string }>();
   const [location, setLocation] = useState<'shop' | 'field'>('shop');
   const [stage, setStage] = useState<'choose' | 'checkout' | 'verify'>('choose');
-  const [vehicleId, setVehicleId] = useState<string | null>(null);
+  const [vehicleId, setVehicleId] = useState<string | null>(requestedVehicleId ?? null);
   const [vehiclesOpen, setVehiclesOpen] = useState(false);
   const services = useQuery({ queryKey: ['services'], queryFn: endpoints.services });
   const vehicles = useQuery({ queryKey: ['vehicles'], queryFn: endpoints.vehicles });

@@ -20,7 +20,9 @@ function simpleVehicle(v: UrableVehicle) {
 }
 function booking(job: UrableJob, vehicles: UrableVehicle[]) {
   const vehicle = vehicles.find(v => job.itemRefs?.some(ref => ref === v.id || ref.endsWith('/' + v.id)));
-  return { id: job.id, serviceName: job.name || `Job ${job.num ?? ''}`.trim(), vehicleName: vehicle?.name ?? 'Vehicle', scheduledAt: job.start ? new Date(job.start).toISOString() : '', status: job.status, paymentStatus: job.paymentStatus, location: job.type === 'field' ? 'Mobile service' : 'In-shop service' };
+  const line = Object.values(job.invoice?.items ?? {}).flat().find(item => item.service?.id || item.productServiceId || item.productServiceRef);
+  const serviceRef = line?.service?.id ?? line?.productServiceId ?? line?.productServiceRef;
+  return { id: job.id, serviceId: serviceRef?.split('/').at(-1), vehicleId: vehicle?.id, serviceName: job.name || `Job ${job.num ?? ''}`.trim(), vehicleName: vehicle?.name ?? 'Vehicle', scheduledAt: job.start ? new Date(job.start).toISOString() : '', status: job.status, paymentStatus: job.paymentStatus, location: job.type === 'field' ? 'Mobile service' : 'In-shop service' };
 }
 export async function customerRoutes(app: FastifyInstance) {
   app.get('/config', async () => {

@@ -48,6 +48,21 @@ async function check(page, width, name, path, screenshot) {
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
   const response = await page.goto(baseUrl + path, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(1200);
+  if (name === 'gallery' && width === 390) {
+    const comparison = page.getByLabel('Compare before and after photos');
+    const box = await comparison.boundingBox();
+    if (!box) throw new Error('Gallery comparison control is missing');
+    await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.75, box.y + box.height * 0.5, { steps: 5 });
+    await page.mouse.up();
+    const divider = await page.getByTestId('before-after-divider').boundingBox();
+    const position = divider ? (divider.x - box.x) / box.width : 0;
+    if (position < 0.7 || position > 0.8) throw new Error(`Gallery comparison did not move: ${position}`);
+    await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5);
+    await page.mouse.down();
+    await page.mouse.up();
+  }
   const layout = await page.evaluate(() => ({ viewport: innerWidth, scrollWidth: document.documentElement.scrollWidth, textLength: document.body.innerText.trim().length }));
   if (screenshot) {
     const directory = resolve(output, String(width));
