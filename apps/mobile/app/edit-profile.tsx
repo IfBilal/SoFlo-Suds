@@ -1,0 +1,10 @@
+import { useState } from 'react';
+import { TextInput } from 'react-native';
+import { router } from 'expo-router';
+import { BrandText, Button, Card, Screen } from '@/components/BrandUI';
+import { api, type SessionUser } from '@/lib/api';
+import { useSession } from '@/lib/session';
+import { font, palette as c } from '@/theme';
+
+export default function EditProfile() { const { user, refreshUser } = useSession(); const [name,setName]=useState(user?.name??''),[phone,setPhone]=useState(user?.phone??''),[busy,setBusy]=useState(false),[error,setError]=useState(''); async function save(){setBusy(true);setError('');try{await api<SessionUser>('/me',{method:'PATCH',body:JSON.stringify({name:name.trim(),phone:phone.trim()})});await refreshUser();router.back()}catch(e){setError(e instanceof Error?e.message:'Please try again.')}finally{setBusy(false)}}return <Screen title="Your SoFlo, your way." subtitle="Keep your contact details current."><Card><BrandText>Name</BrandText><TextInput value={name} onChangeText={setName} style={input} /><BrandText>Email</BrandText><TextInput value={user?.email??''} editable={false} style={[input,{color:c.muted}]} /><BrandText muted style={{fontSize:11,marginTop:-9,marginBottom:14}}>Contact the shop if you need to change your sign-in email.</BrandText><BrandText>Phone</BrandText><TextInput value={phone} onChangeText={setPhone} keyboardType="phone-pad" style={input} />{error&&<BrandText style={{color:c.magentaLight,marginBottom:12}}>{error}</BrandText>}<Button label={busy?'Saving…':'Save details'} onPress={save} disabled={busy||!name||!phone}/></Card></Screen>}
+const input={backgroundColor:c.bg,borderWidth:1,borderColor:c.border,color:c.text,fontFamily:font.body,borderRadius:8,height:47,paddingHorizontal:14,marginTop:6,marginBottom:16} as const;

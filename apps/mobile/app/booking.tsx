@@ -1,0 +1,21 @@
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
+import { BrandText, Button, Card, Screen, StateCard } from '@/components/BrandUI';
+import { UrableBookingWebView } from '@/components/UrableBookingWebView';
+import { endpoints } from '@/lib/api';
+import { palette as c } from '@/theme';
+
+export default function BookingScreen() {
+  const { serviceId } = useLocalSearchParams<{ serviceId?: string }>();
+  const [location, setLocation] = useState<'shop' | 'field'>('shop');
+  const [stage, setStage] = useState<'choose' | 'checkout' | 'verify'>('choose');
+  const services = useQuery({ queryKey: ['services'], queryFn: endpoints.services });
+  const bookings = useQuery({ queryKey: ['bookings'], queryFn: endpoints.bookings, enabled: stage === 'verify' });
+  const selected = services.data?.find(x => x.id === serviceId);
+  if (stage === 'checkout') return <View style={styles.page}><View style={styles.checkoutHeader}><Pressable onPress={() => setStage('verify')}><BrandText style={{ color: c.cyan }}>Close</BrandText></Pressable><BrandText style={{ fontWeight: '600' }}>SoFlo Suds booking</BrandText></View><UrableBookingWebView options={{ location, serviceId }} /></View>;
+  if (stage === 'verify') return <Screen title="Check your booking." subtitle="We’ll show your appointment when Urable confirms it."><Card><BrandText muted>Payment and appointment confirmation happen in the secure SoFlo Suds booking flow. Please check My bookings for the latest status.</BrandText><Button label="Check My bookings" onPress={() => router.replace('/(tabs)/bookings')} style={{ marginTop: 18 }} /><Button label="Return to booking" variant="outline" onPress={() => setStage('checkout')} style={{ marginTop: 10 }} /></Card>{bookings.isFetching && <ActivityIndicator color={c.cyan} style={{ marginTop: 20 }} />}</Screen>;
+  return <Screen title="Your next clean starts here." subtitle="Choose how we’ll care for your vehicle."><View style={styles.steps}>{['1. Service', '2. Location', '3. Schedule & pay'].map((s, i) => <View key={s} style={[styles.step, i === 0 && styles.stepActive]}><BrandText style={{ fontSize: 10 }}>{s}</BrandText></View>)}</View>{services.isPending ? <Card><BrandText muted>Loading service…</BrandText></Card> : services.isError ? <StateCard title="Booking is unavailable" body="Please try again." action="Try again" onAction={() => services.refetch()} /> : <Card><BrandText style={styles.heading}>Your selected service</BrandText><BrandText muted>{selected?.name ?? 'Choose your service in the next step'}</BrandText><BrandText style={[styles.heading, { marginTop: 20 }]}>Where should we come?</BrandText><View style={styles.modes}><Pressable onPress={() => setLocation('shop')} style={[styles.mode, location === 'shop' && { borderColor: c.magenta }]}><BrandText style={{ fontWeight: '600' }}>In-shop</BrandText><BrandText muted style={{ fontSize: 11 }}>Bring your vehicle to SoFlo Suds.</BrandText></Pressable><Pressable onPress={() => setLocation('field')} style={[styles.mode, location === 'field' && { borderColor: c.magenta }]}><BrandText style={{ fontWeight: '600' }}>Mobile</BrandText><BrandText muted style={{ fontSize: 11 }}>We come to your location.</BrandText></Pressable></View><BrandText muted style={{ fontSize: 11, marginVertical: 17 }}>You’ll choose your time, confirm your vehicle and review the payment amount in the secure booking step.</BrandText><Button label="Choose a time  →" onPress={() => setStage('checkout')} /></Card>}</Screen>;
+}
+const styles = StyleSheet.create({ page: { flex: 1, backgroundColor: c.bg }, checkoutHeader: { minHeight: 62, paddingHorizontal: 18, borderBottomWidth: 2, borderColor: c.cyan, flexDirection: 'row', alignItems: 'center', gap: 20 }, steps: { flexDirection: 'row', gap: 6, marginBottom: 20 }, step: { flex: 1, minHeight: 37, padding: 6, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: c.border, borderRadius: 7 }, stepActive: { borderColor: c.magenta }, heading: { fontSize: 18, fontWeight: '600', marginBottom: 10 }, modes: { flexDirection: 'row', gap: 9 }, mode: { flex: 1, borderWidth: 1, borderColor: c.border, borderRadius: 9, padding: 12, minHeight: 100 } });

@@ -1,0 +1,6 @@
+import { useQuery } from '@tanstack/react-query';
+import { BrandText, Card, Screen, StateCard } from '@/components/BrandUI';
+import { api } from '@/lib/api';
+import { palette as c } from '@/theme';
+interface Payment { id: string; status?: string; totalCents?: number; jobIds?: string[] }
+export default function Payments() { const query = useQuery({ queryKey: ['payments'], queryFn: () => api<Payment[]>('/payments') }); return <Screen title="Simple, from quote to receipt." subtitle="Your payment history with SoFlo Suds.">{query.isPending ? <Card><BrandText muted>Loading payments…</BrandText></Card> : query.isError ? <StateCard title="Payments unavailable" body="Please try again." action="Try again" onAction={() => query.refetch()} /> : query.data.length === 0 ? <StateCard title="No payments yet" body="Your receipts and payment history will appear here after a service." /> : query.data.map(p => <Card key={p.id} accent="cyan" style={{ marginBottom: 12 }}><BrandText style={{ color: c.cyan }}>{p.status ?? 'Payment'}</BrandText><BrandText style={{ fontSize: 20, fontWeight: '600', marginTop: 8 }}>{p.totalCents === undefined ? 'Amount unavailable' : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(p.totalCents / 100)}</BrandText><BrandText muted style={{ fontSize: 11 }}>Reference {p.id}</BrandText></Card>)}</Screen>; }

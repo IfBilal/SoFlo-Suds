@@ -1,0 +1,23 @@
+import { View, StyleSheet, Share, Alert } from 'react-native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Gift, Star } from 'lucide-react-native';
+import { BrandText, Button, Card, Screen, SectionTitle, StateCard } from '@/components/BrandUI';
+import { api, endpoints } from '@/lib/api';
+import { palette as c } from '@/theme';
+
+export default function RewardsScreen() {
+  const query = useQuery({ queryKey: ['rewards'], queryFn: endpoints.rewards });
+  const queryClient = useQueryClient();
+  async function redeem(id: string) { try { const result = await api<{ code: string }>('/rewards/' + encodeURIComponent(id) + '/redeem', { method: 'POST' }); await queryClient.invalidateQueries({ queryKey: ['rewards'] }); Alert.alert('Reward unlocked', `Your redemption code is ${result.code}.`); } catch (e) { Alert.alert('Could not redeem', e instanceof Error ? e.message : 'Please try again.'); } }
+  const data = query.data;
+  return <Screen title="Good care deserves more." subtitle="Your Suds Rewards balance and activity.">
+    {query.isPending ? <Card><BrandText muted>Loading rewards…</BrandText></Card> : query.isError ? <StateCard title="Rewards are unavailable" body="Please try again." action="Try again" onAction={() => query.refetch()} /> : <>
+      <Card accent="cyan" style={styles.balance}><BrandText style={styles.eyebrow}>YOUR AVAILABLE POINTS</BrandText><BrandText style={styles.big}>{data?.points.toLocaleString()} <BrandText muted style={{ fontSize: 13 }}>POINTS</BrandText></BrandText><View style={styles.track}><View style={[styles.fill, { width: `${Math.min(100, (data?.points ?? 0) / Math.max(1, data?.rewards[0]?.pointsCost ?? 1000) * 100)}%` }]} /></View><BrandText muted style={{ fontSize: 11 }}>Earn points on completed, paid services.</BrandText></Card>
+      <SectionTitle>A little something for you</SectionTitle>{data?.rewards.length ? data.rewards.map(r => <Card key={r.id} style={{ marginBottom: 12 }}><Gift size={27} color={c.cyan} strokeWidth={1.6} /><BrandText style={styles.rewardName}>{r.name}</BrandText>{r.description && <BrandText muted>{r.description}</BrandText>}<BrandText style={{ color: c.cyan, marginVertical: 12 }}>{r.pointsCost.toLocaleString()} points</BrandText><Button label={(data.points ?? 0) >= r.pointsCost ? 'Redeem reward' : `${r.pointsCost - (data.points ?? 0)} points needed`} variant="outline" disabled={(data.points ?? 0) < r.pointsCost} onPress={() => Alert.alert('Redeem reward?', `${r.pointsCost} points will be used for ${r.name}.`, [{ text: 'Keep points', style: 'cancel' }, { text: 'Redeem', onPress: () => redeem(r.id) }])} /></Card>) : <StateCard title="Rewards are coming soon" body="Your points will appear here as you earn them." />}
+      <SectionTitle>Refer a friend</SectionTitle><Card><Star size={27} color={c.magenta} strokeWidth={1.6} /><BrandText style={styles.rewardName}>Good care goes further.</BrandText><BrandText muted>Share your code. You both earn points after your friend’s first completed, paid service.</BrandText>{data?.referralCode && <><BrandText style={styles.code}>{data.referralCode}</BrandText><Button label="Share referral code" variant="secondary" onPress={() => Share.share({ message: `Book with SoFlo Suds using my referral code ${data.referralCode}` })} /></>}</Card>
+      <SectionTitle>Your reward activity</SectionTitle><Card>{data?.activity.length ? data.activity.map(x => <View key={x.id} style={styles.activity}><BrandText>{x.label}</BrandText><BrandText style={{ color: x.delta >= 0 ? c.cyan : c.magentaLight }}>{x.delta >= 0 ? '+' : ''}{x.delta}</BrandText></View>) : <BrandText muted>No points activity yet.</BrandText>}</Card>
+      {!!data?.redemptions.length && <><SectionTitle>Redeemed rewards</SectionTitle><Card>{data.redemptions.map(x => <View key={x.id} style={styles.activity}><View><BrandText>{x.name}</BrandText><BrandText style={{ color: c.cyan, fontSize: 11 }}>{x.code}</BrandText></View><BrandText muted>{x.status}</BrandText></View>)}</Card></>}
+    </>}
+  </Screen>;
+}
+const styles = StyleSheet.create({ balance: { paddingVertical: 24 }, eyebrow: { color: c.cyan, fontSize: 11, letterSpacing: 2, fontWeight: '600' }, big: { fontSize: 35, fontWeight: '700', marginVertical: 14 }, track: { height: 7, borderRadius: 4, backgroundColor: '#333', marginBottom: 9, overflow: 'hidden' }, fill: { height: 7, borderRadius: 4, backgroundColor: c.cyan }, rewardName: { fontSize: 19, fontWeight: '600', marginTop: 10 }, code: { color: c.cyan, fontSize: 22, fontWeight: '700', marginVertical: 16 }, activity: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomColor: c.border, borderBottomWidth: 1 } });

@@ -1,0 +1,8 @@
+URABLE_API_KEY.txt
+node_modules/
+.expo/
+dist/
+.env
+.env.*
+!.env.example
+*.tsbuildinfo

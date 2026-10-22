@@ -1,0 +1,12 @@
+/* Premium gift artwork, kept within the existing mobile app width. */
+.app-shell .home-gift-card{display:block;padding:0;overflow:hidden;border:1px solid #303030;background:#0b0b0b;border-radius:16px;box-shadow:0 12px 30px #0003}
+.home-gift-card .gift-premium-art{width:100%;margin:0;background:#050505}
+.home-gift-card .gift-premium-art img{display:block;width:100%;max-width:100%;height:auto;object-fit:contain}
+.app-shell .home-gift-card>div:last-child{padding:21px 22px 23px}
+.app-shell .home-gift-card .eyebrow{font-size:8px;line-height:1.6;letter-spacing:1.5px;color:#2fb3fa}
+.app-shell .home-gift-card h2{font-size:25px;line-height:1.2;letter-spacing:-.6px;margin:10px 0}
+.app-shell .home-gift-card p{font-size:12px;line-height:1.7;color:#bbb;margin-bottom:18px}
+.app-shell .home-gift-card .btn{min-height:46px;font-size:13px;border-radius:8px;padding:13px 15px}
+.app-shell .gift-main-art.gift-premium-page{padding:0;min-height:0;background:#050505;border:1px solid #303030;box-shadow:none;border-radius:14px;overflow:hidden}
+.app-shell .gift-main-art.gift-premium-page>img{display:block;width:100%;max-width:100%;height:auto;float:none;margin:0}
+@media(max-width:350px){.app-shell .home-gift-card>div:last-child{padding:19px 17px}.app-shell .home-gift-card h2{font-size:23px}}
