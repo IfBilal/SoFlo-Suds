@@ -1,6 +1,6 @@
 # ADR 0001: Supabase-hosted backend instead of a separate Node API
 
-**Status: PROPOSED. Awaiting Ali's written decision.** Do not cut over until this says *Accepted*. If *Rejected*, `main` (Fastify) remains the implementation and this branch is not merged.
+**Status: ACCEPTED (relayed verbally by the project owner on 22 October 2026; Ali's written confirmation still to be attached).** Acceptance lifts the architecture block only. Cutover still requires the gates in the [runbook](../SUPABASE_CUTOVER_RUNBOOK.md): live audit, backup/restore proof, staging pass, and approval of production Auth settings, sender and controlled Urable checkout.
 
 ## Context
 The handbook (§2) sketches a Node API (Express or Fastify), custom JWTs, and Render/Railway hosting. An installed APK needs a publicly reachable backend; running our own API host is an operational cost the client wants to avoid. Supabase already hosts the database and storage.
@@ -17,4 +17,5 @@ Run the backend on Supabase: Auth, Postgres/RLS, Edge Functions (Urable adapter 
 ## Decision record
 | Date | Decision | By |
 | --- | --- | --- |
-| _pending_ | _Accepted / Rejected_ | Ali |
+| 2026-10-22 | Accepted: handbook tech stack may change to Supabase-hosted backend (verbal, relayed) | Ali, via project owner |
+| _pending_ | Written confirmation to attach here | Ali |

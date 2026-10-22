@@ -13,7 +13,7 @@ Last updated: 22 October 2026.
 | 2 Routes ported with own/wrong-user tests | **Passed locally (fakes for Urable/Auth/Expo)** | `npm run test:functions`: 11 tests, 42 steps. Real Urable reads **not** re-verified |
 | 3 Mobile + admin without Fastify | **Builds only** | mobile typecheck + Android export, admin build. No device, no email round trip, no laptop-off/mobile-data test, no visual regression |
 | 4 Cron/sync/push | **Passed locally** | replay/partial-failure/lease/cursor tests. No real Cron run, no push to a device |
-| 5/6 Cutover, APK, rollback drill | **Not started** | needs Ali's decision ([ADR 0001](adr/0001-supabase-backend.md)) and staging |
+| 5/6 Cutover, APK, rollback drill | **Not started** | Architecture accepted 22 Oct 2026 ([ADR 0001](adr/0001-supabase-backend.md)); still needs audit, backup/restore proof and staging |
 
 ## Phase log (code changed → where applied → tests → device → blocker → rollback)
 
