@@ -8,12 +8,16 @@ Last updated: 22 October 2026.
 
 | Gate | State | Evidence |
 | --- | --- | --- |
-| 0 Baseline audit, backup/restore, staging | **Not done** | Live read-only audit was refused by the permission classifier; no staging project; Docker daemon unavailable (no sudo). Local-only baseline below |
+| 0 Baseline audit, backup/restore, staging | **Audit done; backup unnecessary (no data); no staging** | Live audit 22 Oct 2026 below. Docker unavailable (no sudo) |
 | 1 Schema, RLS, SQL functions | **Passed locally (PGlite)** | `npm run test:db`: 51/51 |
 | 2 Routes ported with own/wrong-user tests | **Passed locally (fakes for Urable/Auth/Expo)** | `npm run test:functions`: 11 tests, 42 steps. Real Urable reads **not** re-verified |
 | 3 Mobile + admin without Fastify | **Builds only** | mobile typecheck + Android export, admin build. No device, no email round trip, no laptop-off/mobile-data test, no visual regression |
 | 4 Cron/sync/push | **Passed locally** | replay/partial-failure/lease/cursor tests. No real Cron run, no push to a device |
 | 5/6 Cutover, APK, rollback drill | **Not started** | Architecture accepted 22 Oct 2026 ([ADR 0001](adr/0001-supabase-backend.md)); still needs audit, backup/restore proof and staging |
+
+## Live audit, 22 Oct 2026 (read-only, counts only)
+
+Project `tocofoxugjkaytxuxyzb` is **empty**: 0 active/deleted customers, 0 admins, 0 legacy sessions, 0 referrals, 0 job links, 0 points rows, 0 reviews, 0 gallery rows, 0 push tokens, 0 storage objects, 0 Auth users, 0 RLS policies. Extensions present: `pgcrypto`, `supabase_vault`; **`pg_cron` and `pg_net` are not enabled**. Auth: email confirmation **on** (`mailer_autoconfirm=false`), **no custom SMTP**, signups open, Site URL still `http://localhost:3000`, redirect allow-list empty. Consequence: no real data to migrate or back up; applying the additive migrations carries no data risk. Auth SMTP/URLs and extensions still need configuring.
 
 ## Phase log (code changed → where applied → tests → device → blocker → rollback)
 
