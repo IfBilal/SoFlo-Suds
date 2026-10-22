@@ -44,8 +44,8 @@ export function RowLink({ icon, title, subtitle, onPress }: { icon?: ReactNode; 
   return <Pressable onPress={onPress} style={styles.row}><View style={styles.iconTile}>{icon ?? <Shield size={19} color={c.cyan} strokeWidth={1.6} />}</View><View style={{ flex: 1 }}><BrandText style={styles.rowTitle}>{title}</BrandText>{subtitle && <BrandText muted style={styles.rowSubtitle}>{subtitle}</BrandText>}</View><ChevronRight size={18} color={c.muted} strokeWidth={1.6} /></Pressable>;
 }
 
-export function StateCard({ title, body, action, onAction }: { title: string; body: string; action?: string; onAction?: () => void }) {
-  return <Card style={{ alignItems: 'center', paddingVertical: 34 }}><View style={styles.stateIcon}><Shield size={27} color={c.cyan} strokeWidth={1.6} /></View><BrandText style={[styles.h2, { textAlign: 'center', marginTop: 16 }]}>{title}</BrandText><BrandText muted style={{ textAlign: 'center', marginTop: 9, marginBottom: 18 }}>{body}</BrandText>{action && onAction && <Button label={action} onPress={onAction} />}</Card>;
+export function StateCard({ title, body, action, onAction, icon }: { title: string; body: string; action?: string; onAction?: () => void; icon?: ReactNode }) {
+  return <Card style={{ alignItems: 'center', paddingVertical: 34 }}><View style={styles.stateIcon}>{icon ?? <Shield size={27} color={c.cyan} strokeWidth={1.6} />}</View><BrandText style={[styles.h2, { textAlign: 'center', marginTop: 16 }]}>{title}</BrandText><BrandText muted style={{ textAlign: 'center', marginTop: 9, marginBottom: 18 }}>{body}</BrandText>{action && onAction && <Button label={action} onPress={onAction} />}</Card>;
 }
 
 const styles = StyleSheet.create({

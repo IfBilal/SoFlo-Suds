@@ -9,6 +9,8 @@
     "dev:mobile": "npm run start --workspace mobile",
     "dev:admin": "npm run dev --workspace @soflo/admin",
     "visual:capture": "node scripts/capture-visual.mjs",
+    "visual:concept": "node scripts/capture-concept.mjs",
+    "visual:admin": "node scripts/capture-admin.mjs",
     "typecheck": "npm run typecheck --workspace @soflo/api && npm run typecheck --workspace mobile && npm run typecheck --workspace @soflo/admin",
     "build": "npm run build --workspace @soflo/api && npm run build --workspace @soflo/admin"
   },

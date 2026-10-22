@@ -11,7 +11,7 @@ export interface Service { id: string; name: string; category: string; descripti
 export interface Booking { id: string; serviceId?: string; vehicleId?: string; serviceName: string; vehicleName: string; scheduledAt: string; status: string; location?: string; paymentStatus?: string }
 export interface Vehicle { id: string; name: string; year?: number; make?: string; model?: string; color?: string; plate?: string }
 export interface RewardSummary { points: number; rewards: Array<{ id: string; name: string; pointsCost: number; description?: string }>; activity: Array<{ id: string; label: string; delta: number; createdAt: string }>; redemptions: Array<{ id: string; code: string; status: string; name: string }>; referralCode?: string }
-export interface ProtectionRecord { id: string; vehicleName: string; serviceName: string; appliedOn: string; product?: string; coverage?: string; expiresOn?: string }
+export interface ProtectionRecord { id: string; vehicleId: string; vehicleName: string; serviceName: string; appliedOn: string; product?: string; coverage?: string; expiresOn?: string }
 export interface ShopProduct { id: string; name: string; brand?: string; category?: string; description?: string; priceCents?: number; imageUrl?: string }
 export interface GalleryProject { id: string; title: string; caption?: string; tag?: string; beforeUrl: string; afterUrl: string }
 export interface Review { id: string; rating: number; body?: string; customerName: string; createdAt: string }

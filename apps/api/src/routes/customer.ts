@@ -140,7 +140,7 @@ export async function customerRoutes(app: FastifyInstance) {
     if (query.vehicleId && !allowed.has(query.vehicleId)) return [];
     const names: string[] = Array.isArray(categories.rows[0]?.value) ? categories.rows[0].value.map((x: unknown) => String(x).toLowerCase()) : [];
     const productMap = new Map(services.map(x => [x.id,x]));
-    const records: Array<{id:string;vehicleName:string;serviceName:string;appliedOn:string;product?:string;coverage?:string;expiresOn?:string}> = [];
+    const records: Array<{id:string;vehicleId:string;vehicleName:string;serviceName:string;appliedOn:string;product?:string;coverage?:string;expiresOn?:string}> = [];
     const usedWarranties = new Set<string>();
     for (const job of jobs) {
       if (job.status.toLowerCase() !== 'completed') continue;
@@ -161,13 +161,13 @@ export async function customerRoutes(app: FastifyInstance) {
           const timestamp = job.completedAt ?? job.start;
           const appliedOn = warranty?.appliedOn ?? (timestamp !== undefined ? new Date(timestamp).toISOString() : null);
           if (!appliedOn) continue;
-          records.push({ id:`${job.id}:${productId}:${itemId}`,vehicleName:vehicle?.name ?? 'Vehicle',serviceName:service.name,appliedOn,product:warranty?.product ?? undefined,coverage:warranty?.coverage ?? undefined,expiresOn:warranty?.expiresOn ?? undefined });
+          records.push({ id:`${job.id}:${productId}:${itemId}`,vehicleId:itemId,vehicleName:vehicle?.name ?? 'Vehicle',serviceName:service.name,appliedOn,product:warranty?.product ?? undefined,coverage:warranty?.coverage ?? undefined,expiresOn:warranty?.expiresOn ?? undefined });
         }
       }
     }
     for (const warranty of warranties.rows) {
       if (usedWarranties.has(warranty.id) || !allowed.has(warranty.urable_vehicle_id) || (query.vehicleId && warranty.urable_vehicle_id !== query.vehicleId)) continue;
-      records.push({id:warranty.id,vehicleName:vehicles.find(v=>v.id===warranty.urable_vehicle_id)?.name ?? 'Vehicle',serviceName:'Protection record',appliedOn:warranty.appliedOn,product:warranty.product ?? undefined,coverage:warranty.coverage ?? undefined,expiresOn:warranty.expiresOn ?? undefined});
+      records.push({id:warranty.id,vehicleId:warranty.urable_vehicle_id,vehicleName:vehicles.find(v=>v.id===warranty.urable_vehicle_id)?.name ?? 'Vehicle',serviceName:'Protection record',appliedOn:warranty.appliedOn,product:warranty.product ?? undefined,coverage:warranty.coverage ?? undefined,expiresOn:warranty.expiresOn ?? undefined});
     }
     return records.sort((a,b)=>new Date(b.appliedOn).getTime()-new Date(a.appliedOn).getTime());
   });
