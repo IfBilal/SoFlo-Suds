@@ -19,6 +19,14 @@ Last updated: 22 October 2026.
 
 Project `tocofoxugjkaytxuxyzb` is **empty**: 0 active/deleted customers, 0 admins, 0 legacy sessions, 0 referrals, 0 job links, 0 points rows, 0 reviews, 0 gallery rows, 0 push tokens, 0 storage objects, 0 Auth users, 0 RLS policies. Extensions present: `pgcrypto`, `supabase_vault`; **`pg_cron` and `pg_net` are not enabled**. Auth: email confirmation **on** (`mailer_autoconfirm=false`), **no custom SMTP**, signups open, Site URL still `http://localhost:3000`, redirect allow-list empty. Consequence: no real data to migrate or back up; applying the additive migrations carries no data risk. Auth SMTP/URLs and extensions still need configuring.
 
+## Applied to the active project, 22 Oct 2026 (empty project, approved)
+
+Migrations 001-004 recorded in migration history; extensions `pg_net`, `pg_cron` enabled; functions `soflo-api` (gateway JWT on), `cron-worker`, `health` deployed; secrets `URABLE_API_KEY`, `CRON_SECRET` set; Auth Site URL `soflosuds://reset`, redirect allow-list set, Brevo SMTP set, email confirmation **left on**; Cron job `soflo-worker` every 5 minutes with Vault secrets. Security advisors: no critical findings (intentional closed tables; `shop_config()` public by design; `pg_net` in `public`, low).
+
+**Live smoke test (18/18 passed)** with marked QA accounts (placeholder Urable id, so nothing created in Urable), all removed afterward (users, admins, Auth users, audit = 0): sign-in, `PROFILE_INCOMPLETE` then idempotent `/me/complete`, `/me`, `/rewards`, `/vehicles`, customer blocked from admin, RLS own-row only and protected column denied, `shop_config`, admin `/admin/me` + dashboard, admin identity is not a customer, deactivated admin blocked at once, account deletion, deleted token rejected.
+
+Still open: owner admin not created (email/password not provided); real signup email round trip, device checks, APK, admin hosting.
+
 ## Phase log (code changed → where applied → tests → device → blocker → rollback)
 
 **Phase 1** — `supabase/migrations/20261022000001..4`. Additive: `users/admins.auth_user_id` (unique), nullable password hashes, `soflo_private` schema, revoked all default client grants, column-limited own/public reads, `shop_config()` RPC, `complete_profile`, `redeem_reward`, `record_job` (credit-once, referral settlement for both sides, refund reversal), `delete_account`, sync lease, `push_tickets`. Applied: local PGlite only. Tests: `supabase/tests/{rls,functions}.test.ts`. Rollback: nothing deployed; if later deployed, columns/policies are safe to leave.
