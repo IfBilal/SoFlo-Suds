@@ -32,6 +32,8 @@ npm run dev:admin
 
 The API loads its `.env` automatically. The mobile app must use an API URL reachable from the phone or emulator. The Urable key belongs only in `apps/api/.env` or hosting secrets, never in `EXPO_PUBLIC_*` or the repository.
 
+The mobile app uses Expo SDK 57 for Expo Go 57.x on Android. After changing SDK versions, stop any running Expo server and restart it with `cd apps/mobile && npx expo start --clear` before scanning the QR code again.
+
 ## Checks
 
 ```bash
