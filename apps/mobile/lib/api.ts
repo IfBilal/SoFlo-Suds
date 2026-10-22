@@ -15,6 +15,7 @@ export interface ProtectionRecord { id: string; vehicleName: string; serviceName
 export interface ShopProduct { id: string; name: string; brand?: string; category?: string; description?: string; priceCents?: number; imageUrl?: string }
 export interface GalleryProject { id: string; title: string; caption?: string; tag?: string; beforeUrl: string; afterUrl: string }
 export interface Review { id: string; rating: number; body?: string; customerName: string; createdAt: string }
+export interface ShopConfig { shopAddress?: string | null; shopPhone?: string | null; shopEmail?: string | null; mobileAreaText?: string | null }
 
 let accessToken: string | null = null;
 
@@ -61,6 +62,7 @@ export async function api<T>(path: string, options: RequestInit = {}, retry = tr
 
 export const endpoints = {
   me: () => api<SessionUser>('/me'),
+  config: () => api<ShopConfig>('/config'),
   login: (email: string, password: string) => api<SessionResult>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   signup: (input: { name: string; email: string; phone: string; password: string; referralCode?: string }) => api<SessionResult>('/auth/signup', { method: 'POST', body: JSON.stringify(input) }),
   forgot: (email: string) => api<{ ok: boolean }>('/auth/forgot', { method: 'POST', body: JSON.stringify({ email }) }),

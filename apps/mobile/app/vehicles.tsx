@@ -36,7 +36,7 @@ export default function VehiclesScreen() {
 
   return <Screen title="Your garage. Protected." subtitle="Every vehicle. Every service. One place.">
     <Button label="+ Add vehicle" variant="secondary" onPress={() => router.push('/vehicle-form' as never)} style={{ marginBottom: 18 }} />
-    {error && <Card accent="magenta" style={{ marginBottom: 12 }}><BrandText style={{ color: c.magentaLight }}>{error}</BrandText></Card>}
+    {!!error && <Card accent="magenta" style={{ marginBottom: 12 }}><BrandText style={{ color: c.magentaLight }}>{error}</BrandText></Card>}
     {query.isPending ? <Card><BrandText muted>Loading vehicles…</BrandText></Card>
       : query.isError ? <StateCard title="Vehicles are unavailable" body="Please try again." action="Try again" onAction={() => query.refetch()} />
       : query.data.length === 0 ? <StateCard title="Your garage is ready" body="Add your first vehicle to book a service." action="Add vehicle" onAction={() => router.push('/vehicle-form' as never)} />

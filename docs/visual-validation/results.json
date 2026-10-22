@@ -1,0 +1,425 @@
+[
+  {
+    "width": 390,
+    "name": "home",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 73,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "services",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 260,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "booking",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 479,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "bookings",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 282,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "booking-detail",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 186,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "vehicles",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 173,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "vehicle-form",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 119,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "protection",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 226,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "rewards",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 479,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "gallery",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 195,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "shop",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 240,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "profile",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 253,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "payments",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 111,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "notifications",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 372,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "contact",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 112,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "privacy",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 531,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "edit-profile",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 150,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "delete-account",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 268,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "review",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 133,
+    "errors": []
+  },
+  {
+    "width": 350,
+    "name": "home",
+    "status": 200,
+    "viewport": 350,
+    "scrollWidth": 350,
+    "textLength": 686,
+    "errors": []
+  },
+  {
+    "width": 350,
+    "name": "services",
+    "status": 200,
+    "viewport": 350,
+    "scrollWidth": 350,
+    "textLength": 260,
+    "errors": []
+  },
+  {
+    "width": 350,
+    "name": "rewards",
+    "status": 200,
+    "viewport": 350,
+    "scrollWidth": 350,
+    "textLength": 479,
+    "errors": []
+  },
+  {
+    "width": 350,
+    "name": "shop",
+    "status": 200,
+    "viewport": 350,
+    "scrollWidth": 350,
+    "textLength": 240,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "home",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 686,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "services",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 260,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "booking",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 479,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "bookings",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 282,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "booking-detail",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 186,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "vehicles",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 173,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "vehicle-form",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 119,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "protection",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 226,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "rewards",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 479,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "gallery",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 195,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "shop",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 240,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "profile",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 253,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "payments",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 111,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "notifications",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 372,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "contact",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 112,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "privacy",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 531,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "edit-profile",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 150,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "delete-account",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 268,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "name": "review",
+    "status": 200,
+    "viewport": 320,
+    "scrollWidth": 320,
+    "textLength": 133,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "welcome",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 108,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "login",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 116,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "signup",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 153,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "forgot",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 86,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "name": "reset",
+    "status": 200,
+    "viewport": 390,
+    "scrollWidth": 390,
+    "textLength": 109,
+    "errors": []
+  }
+]

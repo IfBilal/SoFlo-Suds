@@ -12,7 +12,7 @@ export default function ServicesScreen() {
   const [category, setCategory] = useState('All');
   const [selected, setSelected] = useState<string | null>(serviceId ?? null);
   const query = useQuery({ queryKey: ['services'], queryFn: endpoints.services });
-  const categories = useMemo(() => ['All', ...new Set(query.data?.map(x => x.category) ?? [])], [query.data]);
+  const categories = useMemo(() => ['All', ...new Set(query.data?.map(x => x.category) ?? [])].sort((a, b) => a === 'All' ? -1 : b === 'All' ? 1 : a.localeCompare(b)), [query.data]);
   const service = query.data?.find(x => x.id === selected);
   return <Screen title="The right care. Every time." subtitle="From a fresh start to long-term protection.">
     {query.isPending ? <Card><BrandText muted>Loading services…</BrandText></Card> : query.isError ? <StateCard title="Services are unavailable" body="Please try again." action="Try again" onAction={() => query.refetch()} /> : <>

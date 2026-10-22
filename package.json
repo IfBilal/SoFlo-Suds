@@ -1,12 +1,18 @@
 {
   "name": "soflo-suds",
   "private": true,
-  "workspaces": ["apps/*"],
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev:api": "npm run dev --workspace @soflo/api",
     "dev:mobile": "npm run start --workspace mobile",
     "dev:admin": "npm run dev --workspace @soflo/admin",
+    "visual:capture": "node scripts/capture-visual.mjs",
     "typecheck": "npm run typecheck --workspace @soflo/api && npm run typecheck --workspace mobile && npm run typecheck --workspace @soflo/admin",
     "build": "npm run build --workspace @soflo/api && npm run build --workspace @soflo/admin"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
   }
 }

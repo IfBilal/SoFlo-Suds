@@ -4,8 +4,8 @@ This file tracks implementation honestly. The handbook is the final scope author
 
 | Area | Implemented in repo | Still needed for completion |
 | --- | --- | --- |
-| Concept reference | 667-line concept-to-product spec, eight refreshed phone screenshots, recovered images, 205-line implementation plan | Final UI mockup PDF review; detailed device screenshot comparison for every screen/state |
-| Brand/shell | Logo, fonts, dark cyan/magenta tokens, five handbook tabs, dark splash/icon, auth entry screens | Narrow-phone/tablet/native device review, welcome slides, final icon approval |
+| Concept reference | Detailed concept-to-product spec and implementation plan; 47 browser visual route checks at 390/350/320 px with saved screenshots and fixes documented in `docs/visual-validation` | Final UI mockup PDF review; real Android/iOS screenshot comparison for every screen/state and real content |
+| Brand/shell | Logo, fonts, dark cyan/magenta tokens, five handbook tabs, dark splash/icon, auth entry screens; header/back/dock and home hero corrected against concept; 320/350 px web widths checked | Tablet/native device review, welcome slides, final icon approval |
 | Auth | API signup/login/refresh/logout/reset/delete, mobile forms, hashed passwords, SecureStore refresh; live signup/login/refresh/logout/delete passed and marked QA customer was removed from Supabase and Urable; Brevo SMTP authenticated and a test email arrived in Gmail | Full forgot/reset flow with a real app account, email verification requirement if approved, rate-limit/distributed-session QA |
 | Urable adapter | Live catalog read: 69 services, 49 bookable; customer login reads and vehicle create/edit/delete passed against Urable; customer signup/delete cleanup passed | Live integration through remaining routes, product mapping, production job handoff |
 | Booking/payment | Branded service/location handoff into Urable virtual shop; no false confirmation | Verified post-checkout job identity, native vehicle/address/date/review/pay steps, actual payment/device test, promo/reward/product application |
