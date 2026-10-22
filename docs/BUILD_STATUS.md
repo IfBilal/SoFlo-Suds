@@ -1,3 +1,5 @@
+> **Branch note (22 Oct 2026):** this table describes the Fastify build on `main`. On `supabase-backend-migration` the backend moved to Supabase; its status is in [SUPABASE_MIGRATION_STATUS.md](SUPABASE_MIGRATION_STATUS.md). Rows below are not proof of the Supabase path.
+
 # SoFlo Suds build status — 22 October 2026
 
 This file tracks implementation honestly. The handbook is the final scope authority. A screen or API route is not complete until it works against the approved Supabase and Urable accounts on an installable app.

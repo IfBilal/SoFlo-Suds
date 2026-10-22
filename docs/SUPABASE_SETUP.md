@@ -1,73 +1,65 @@
-# Supabase setup for SoFlo Suds
+# Supabase setup for SoFlo Suds (Supabase-hosted backend)
 
-The handbook is the scope authority. This project uses a Supabase PostgreSQL database and Supabase Storage. The API owns access to both. No Supabase service-role key or database password belongs in the mobile/admin bundles.
+> **Provisional.** This describes the architecture on the `supabase-backend-migration` branch. It replaces the Fastify setup only if Ali approves ([ADR 0001](adr/0001-supabase-backend.md)). The Fastify setup on `main` is unchanged. **Nothing here has been applied to the active project `tocofoxugjkaytxuxyzb`.**
 
-## 1. Project and connection status
+Backend runtime = Supabase: Auth (customers and admins), Postgres + RLS, Edge Functions (`soflo-api`, `cron-worker`, `health`), Storage (`gallery`), Cron. Urable stays the authority for customers, vehicles, services, jobs and payments. Brevo stays the sender for Auth mail through Supabase's custom SMTP.
 
-The active `SoFlo-Suds` project (`tocofoxugjkaytxuxyzb`) was connected on 22 October 2026. The 20 app tables and seed settings were applied, row-level security is enabled on all 20 tables with no direct-client policies, and the public `gallery` bucket was created with JPEG/PNG/WebP and 10 MB limits. A dedicated `soflo_api` role has only runtime table permissions and bypasses RLS for the server. The local connection and service-role key are stored in ignored `apps/api/.env`; the personal access token is outside the repository. A live anonymous PostgREST read of the seeded `settings` table returned zero rows, while the server role read three, confirming the intended access boundary. Keep test and production separate before releasing customer data.
+## 1. What is public and what is secret
 
-Codex's `supabase-soflo` MCP connection is scoped to this project and uses a local credential helper. MCP `list_tables` and `list_storage_buckets` both succeeded after setup. The helper and token live under `~/.config/soflo-suds/`, outside the repository.
+| Value | Where | Public? |
+| --- | --- | --- |
+| Project URL + publishable key | `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` | Yes. Only useful through RLS and signed-in function calls |
+| `URABLE_API_KEY` (+ optional `URABLE_BASE_URL`) | `supabase secrets set` | **Secret** |
+| `CRON_SECRET` (32+ random chars) | `supabase secrets set` and Vault (`soflo_cron_secret`) | **Secret** |
+| `ADMIN_ORIGINS` (comma list, e.g. `https://admin.example.com`) | `supabase secrets set` | Config |
+| `EXPO_ACCESS_TOKEN` (optional, Expo push) | `supabase secrets set` | **Secret** |
+| Service-role key, `SUPABASE_DB_URL` | Injected into functions by the platform; also needed in your shell for `scripts/supabase/*.mjs` | **Secret**, never in Expo/Vite |
+| Brevo SMTP | Dashboard → Authentication → SMTP Settings | **Secret** |
 
-## 2. Set server environment
+Hosted Edge Functions cannot open SMTP ports 25/587, so no `nodemailer`: Auth mail goes through the Auth SMTP setting.
 
-Copy `apps/api/.env.example` to `apps/api/.env` and fill in at least:
-
-```text
-DATABASE_URL=postgresql://...
-DATABASE_CA_CERT_PATH=/absolute/path/to/supabase-ca.crt
-JWT_SECRET=<at least 32 random characters>
-URABLE_API_KEY=<current SoFlo Suds key>
-SUPABASE_URL=https://<project>.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=<server-only key>
-ADMIN_ORIGIN=http://localhost:5173
-ADMIN_EMAIL=<owner admin email>
-ADMIN_PASSWORD=<temporary strong password, 12+ characters>
-```
-
-The API loads `.env` automatically. The file is ignored by Git. `EXPO_PUBLIC_*` values are visible in the compiled app, so never put API/database/service-role secrets there. For Supabase pooled PostgreSQL, download its CA certificate from the project Database settings and set `DATABASE_CA_CERT_PATH`; the API verifies the TLS chain. The configured runtime connection uses the documented shared transaction pooler and the `soflo_api.<project-ref>` username.
-
-## 3. Apply schema and bootstrap admin
+## 2. Local verification (no Docker needed)
 
 ```bash
 npm install
-npm run migrate --workspace @soflo/api
-npm run bootstrap:admin --workspace @soflo/api
+npm run test:backend      # SQL replay + RLS matrix (PGlite) and Edge Function contract tests (Deno)
+npm run check:functions   # Deno type-check of the three functions
 ```
 
-The current project already has migration 001 applied. For a fresh project, `migrate` applies `apps/api/sql/001_initial.sql` only when `DATABASE_URL` uses a privileged migration role; the least-privilege runtime role cannot perform DDL. Schema changes after first deployment need versioned migrations; do not edit a deployed migration in place. `bootstrap:admin` creates or resets the configured admin login. Remove `ADMIN_PASSWORD` from persistent server env after bootstrapping if the hosting process does not need it.
+`test:db` replays every migration in `supabase/migrations` on PGlite (in-process Postgres) and runs the anon / customer A / customer B / deleted / admin / service-role matrix. `test:functions` runs the real function handlers against that same schema over a Postgres socket, with Urable, Auth, Storage and Expo faked. PGlite is a single-connection engine: it proves SQL semantics and the replay, **not** concurrency under load or platform behaviour. To run the full stack, start Docker and use `supabase start` (config in `supabase/config.toml`).
 
-## 4. Storage buckets
-
-The **public** `gallery` bucket now exists with JPEG, PNG and WebP uploads limited to 10 MB. Admin uploads flow through `/admin/uploads/gallery`, which authenticates the admin and uses the server-side service-role key. The customer app only reads published gallery URLs.
-
-Create a **private** `warranty-documents` bucket when warranty document upload is enabled. The current implementation stores warranty text/dates but does not upload or serve private warranty files yet. Do not place private documents in the public gallery bucket.
-
-## 5. Customer app and admin URLs
-
-Copy `apps/mobile/.env.example` to `apps/mobile/.env`. Set `EXPO_PUBLIC_API_URL` to the HTTPS API URL for a physical phone; `localhost` on a phone means the phone itself. For Android emulator local testing, `http://10.0.2.2:3000` reaches the host API. Set `VITE_API_URL` in `apps/admin/.env` to the API URL.
+## 3. Staging first (never the active project)
 
 ```bash
-npm run dev:api
-npm run dev:mobile
-npm run dev:admin
+supabase login
+supabase link --project-ref <STAGING-REF>
+supabase db push                                   # applies supabase/migrations/*
+supabase secrets set URABLE_API_KEY=... CRON_SECRET=... ADMIN_ORIGINS=https://<admin-host>
+supabase functions deploy soflo-api cron-worker health
 ```
 
-For real payment/checkout tests, use a phone build and the client's approved test conditions. A browser preview alone does not establish WebView card-authentication behavior.
+Dashboard settings to apply on staging, then record the final choices in the status file:
+- **Authentication → Providers → Email**: decide *Confirm email*. The code supports both; with it on, signup shows a "check your email" screen and the profile is completed at first login.
+- **Authentication → URL Configuration**: Site URL; redirect allow-list `soflosuds://reset`, `soflosuds://**`, and the admin origin.
+- **Authentication → SMTP Settings**: Brevo host/port/user/password, approved sender.
+- **Authentication → Sign In / Providers**: disable public signups only if admin invites are used for a closed beta; customers need signup on.
+- Extensions: `pg_cron`, `pg_net`, `supabase_vault`; then run `supabase/cron/schedule.sql` by hand.
 
-## 6. Other production inputs
+Create the first admin (no public admin signup exists):
 
-- Transactional email: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, and `APP_RESET_URL` for password reset. Use an SMTP service with an approved sender address before testing delivery.
-- Shop config: set address, phone, email, mobile area, timezone and reward values from the admin Settings screen. Do not publish blank contact details.
-- Push: connect the Expo/EAS project, add Android FCM and iOS APNs credentials, then request permission in the mobile Notification settings screen. `npm run sync:once --workspace @soflo/api` is the server job to run every five minutes in a single scheduled worker.
-- Store access: Apple and Google developer accounts and final privacy policy approval are needed before submissions.
+```bash
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... ADMIN_EMAIL=owner@example.com ADMIN_PASSWORD='at-least-12-chars' \
+  node scripts/supabase/bootstrap-admin.mjs
+```
 
-## 7. First live verification
+## 4. Existing customers
 
-1. Run migration; bootstrap admin; sign in to admin.
-2. Start API and mobile app; sign up a marked test customer. Verify the customer appears in Urable.
-3. Add/edit/delete a marked test vehicle, checking Urable after each action.
-4. Read the live service catalog, open an in-shop and mobile booking handoff, and verify the Urable time-slot/payment UI.
-5. Complete one approved future test booking only when a test payment path is agreed, then verify same-account booking linkage and payment state. Cancel the test as appropriate.
-6. Test reward, review and protection behavior on a legitimately completed paid test job, then clean up or clearly tag test records.
+Passwords cannot be moved (Supabase Auth does not accept our bcrypt hashes and no plaintext exists). `scripts/supabase/migrate-legacy-users.mjs` creates a passwordless, pre-confirmed Auth identity per legacy customer and sets `users.auth_user_id`, keeping every `users.id`, Urable link, point, redemption and referral. Customers then choose a password through **Forgot password**. Dry run is the default; do one account (`--apply --limit 1`) end to end before the rest. Count real accounts first (see the status file: the live audit is still outstanding).
 
-If database or storage credentials are absent, the API health route can run but data-backed routes cannot be verified. Do not describe the project as end-to-end tested until this checklist and the handbook's Milestone A checklist pass.
+## 5. Access model (summary)
+
+Default-deny on all tables. Direct client reads exist only for: own `users` columns (no hash/Urable id), own `points_ledger` and `reward_redemptions`, active `rewards`, published `gallery` columns and active `shop_products` columns, plus the `shop_config()` RPC. Everything else, and every write, goes through `soflo-api`, which resolves the caller from the server-verified Auth user (`users.auth_user_id` / active `admins.auth_user_id`) and never from request bodies. Business transactions live in `soflo_private.*` SQL functions callable only by `service_role`. The details and tests are in `supabase/migrations/` and `supabase/tests/`.
+
+## 6. Storage
+
+Public `gallery` bucket (JPEG/PNG/WebP, 10 MB). Clients have no write policy; admin uploads go through `POST /admin/uploads/gallery`, which checks the file's magic bytes and generates the object key. Warranty documents (a private bucket with signed URLs) are still not implemented.

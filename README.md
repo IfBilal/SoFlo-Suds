@@ -6,6 +6,8 @@ Expo/React Native customer app, Fastify TypeScript API, and React/Vite web admin
 
 The proposed move from the Fastify API to Supabase Auth, Edge Functions, RLS and Cron is documented in the [Claude Code migration handoff](docs/SUPABASE_BACKEND_MIGRATION_HANDOFF.md) on the `supabase-backend-migration` branch. It remains provisional until Ali confirms the handbook's stack requirement; the current Fastify implementation remains on `main`.
 
+**On this branch** the mobile and admin apps already talk to Supabase Auth and the `soflo-api` Edge Function (see [migration status](docs/SUPABASE_MIGRATION_STATUS.md), [setup](docs/SUPABASE_SETUP.md), [cutover runbook](docs/SUPABASE_CUTOVER_RUNBOOK.md), [ADR 0001](docs/adr/0001-supabase-backend.md)). Nothing has been applied to the active Supabase project. `apps/api` is kept as the reference implementation until approval. Replace `EXPO_PUBLIC_API_URL` / `VITE_API_URL` in the steps below with the Supabase public values from the `.env.example` files.
+
 The repository contains branded customer screens, a five-tab shell, custom auth/API routes, a Supabase-compatible PostgreSQL migration, a server-only Urable adapter, a booking handoff screen, a status/points/reminder job, and a separate admin app. Typechecks, API/admin builds and Android JS export pass. The saved HTML was rendered route by route; core concept images are in `docs/assets` and eight source captures are in `docs/concept`. The [visual validation report](docs/visual-validation/README.md) records 47 browser route checks, the corrected home hero/header/dock and remaining native review.
 
 **This is not yet a finished customer app.** The approved SoFlo-Suds Supabase project is connected: the schema, server role, and gallery bucket are in place. The Urable runtime key is configured locally; live signup/login/session deletion, services, bookings, and vehicle CRUD API checks passed with marked QA records removed afterward. Brevo SMTP is configured locally: authentication passed and a test message was delivered to Gmail. The app's own forgot/reset flow has not yet been exercised with a real account. EAS push credentials and a physical device are not connected in this workspace. The virtual-shop checkout has not been completed with a payment, and post-checkout job linkage is not verified. Promo codes and shop products cannot yet be carried into Urable virtual-shop payment. Store submissions and an installable verified APK remain outstanding. See [build status](docs/BUILD_STATUS.md) for the exact feature-by-feature state.
@@ -44,6 +46,7 @@ The mobile app uses Expo SDK 57 for Expo Go 57.x on Android. After changing SDK 
 npm run typecheck
 npm run build
 npm test --workspace @soflo/api
+npm run test:backend   # Supabase SQL/RLS + Edge Function tests
 npm run sync:once --workspace @soflo/api
 ```
 
