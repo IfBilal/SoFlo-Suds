@@ -1,0 +1,10 @@
+{
+  "imports": {
+    "postgres": "npm:postgres@3.4.5",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.118.0",
+    "zod": "npm:zod@4.1.12",
+    "@electric-sql/pglite": "npm:@electric-sql/pglite@0.5.10",
+    "@electric-sql/pglite/contrib/pgcrypto": "npm:@electric-sql/pglite@0.5.10/contrib/pgcrypto",
+    "@electric-sql/pglite-socket": "npm:@electric-sql/pglite-socket@0.2.13"
+  }
+}

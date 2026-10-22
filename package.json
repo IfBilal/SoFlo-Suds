@@ -13,10 +13,14 @@
     "visual:admin": "node scripts/capture-admin.mjs",
     "typecheck": "npm run typecheck --workspace @soflo/api && npm run typecheck --workspace mobile && npm run typecheck --workspace @soflo/admin",
     "build": "npm run build --workspace @soflo/api && npm run build --workspace @soflo/admin",
-    "test:db": "tsx --test supabase/tests/*.test.ts"
+    "test:db": "tsx --test supabase/tests/*.test.ts",
+    "test:functions": "deno test -A --config supabase/functions/tests/deno.json supabase/functions/tests/",
+    "check:functions": "deno check --config supabase/functions/deno.json supabase/functions/soflo-api/index.ts supabase/functions/cron-worker/index.ts supabase/functions/health/index.ts",
+    "test:backend": "npm run test:db && npm run test:functions"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.5.11",
+    "@electric-sql/pglite": "0.5.10",
+    "deno": "2.9.6",
     "playwright": "^1.64.1"
   }
 }
