@@ -12,9 +12,11 @@
     "visual:concept": "node scripts/capture-concept.mjs",
     "visual:admin": "node scripts/capture-admin.mjs",
     "typecheck": "npm run typecheck --workspace @soflo/api && npm run typecheck --workspace mobile && npm run typecheck --workspace @soflo/admin",
-    "build": "npm run build --workspace @soflo/api && npm run build --workspace @soflo/admin"
+    "build": "npm run build --workspace @soflo/api && npm run build --workspace @soflo/admin",
+    "test:db": "tsx --test supabase/tests/*.test.ts"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
     "playwright": "^1.64.1"
   }
 }
