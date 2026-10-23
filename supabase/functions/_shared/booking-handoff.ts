@@ -2,6 +2,7 @@ import { UrableClient, type UrableCustomer, type UrableJob } from './urable.ts';
 
 export interface BookingHandoffAttempt {
   verifiedEmail: string;
+  originalCustomerId?: string;
   startedAt: number;
   existingJobIds: ReadonlySet<string>;
   confirmationNumber?: number;
@@ -40,6 +41,7 @@ export function selectBookingHandoff(
   for (const customer of customers) {
     if (!customerHasEmail(customer, email)) continue;
     for (const job of jobsByCustomer.get(customer.id) ?? []) {
+      if (job.customerRef !== customer.id && !job.customerRef?.endsWith('/' + customer.id)) continue;
       if (seenJobs.has(job.id) || attempt.existingJobIds.has(job.id)) continue;
       if (typeof job.created !== 'number' || job.created < earliestCreated) continue;
       if (!['scheduled', 'in progress', 'completed'].includes(job.status)) continue;
@@ -65,6 +67,9 @@ export async function findBookingHandoff(
   attempt: BookingHandoffAttempt,
 ): Promise<BookingHandoffResult> {
   const customers = await urable.findCustomersByEmail(attempt.verifiedEmail);
+  if (attempt.originalCustomerId && !customers.some((c) => c.id === attempt.originalCustomerId)) {
+    customers.push({ id: attempt.originalCustomerId, email: attempt.verifiedEmail });
+  }
   const jobsByCustomer = new Map<string, UrableJob[]>();
   await Promise.all(customers.map(async (customer) => {
     if (customerHasEmail(customer, attempt.verifiedEmail.trim().toLowerCase())) {

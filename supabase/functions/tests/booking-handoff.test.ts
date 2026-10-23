@@ -11,15 +11,15 @@ const customers: UrableCustomer[] = [
   { id: 'other', email: 'other@example.test' },
 ];
 
-function job(id: string, num: number, created = startedAt + 1_000): UrableJob {
-  return { id, num, created, status: 'scheduled', paymentStatus: 'unpaid' };
+function job(id: string, num: number, created = startedAt + 1_000, customerRef = 'original'): UrableJob {
+  return { id, num, created, customerRef, status: 'scheduled', paymentStatus: 'unpaid' };
 }
 
 test('matches a new virtual-shop job even when Urable created a duplicate customer', () => {
   const jobs = new Map<string, UrableJob[]>([
     ['original', [job('old', 1, startedAt - 86_400_000)]],
-    ['duplicate', [job('new', 2)]],
-    ['other', [job('someone-else', 3)]],
+    ['duplicate', [job('new', 2, startedAt + 1_000, 'duplicate')]],
+    ['other', [job('someone-else', 3, startedAt + 1_000, 'other')]],
   ]);
   assert.deepEqual(selectBookingHandoff(customers, jobs, {
     verifiedEmail: 'Customer@Example.Test',
@@ -44,7 +44,7 @@ test('does not attach an ambiguous booking without its confirmation number', () 
 test('does not attach an old, cancelled, or different-email job', () => {
   const jobs = new Map<string, UrableJob[]>([
     ['original', [job('old', 1, startedAt - 86_400_000), { ...job('cancelled', 2), status: 'canceled' }]],
-    ['other', [job('other-new', 3)]],
+    ['other', [job('other-new', 3, startedAt + 1_000, 'other')]],
   ]);
   assert.deepEqual(selectBookingHandoff(customers, jobs, {
     verifiedEmail: 'customer@example.test',

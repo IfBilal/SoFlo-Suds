@@ -1,6 +1,6 @@
 # Supabase setup for SoFlo Suds (Supabase-hosted backend)
 
-> **Provisional.** This describes the architecture on the `supabase-backend-migration` branch. It replaces the Fastify setup only if Ali approves ([ADR 0001](adr/0001-supabase-backend.md)). The Fastify setup on `main` is unchanged. **Nothing here has been applied to the active project `tocofoxugjkaytxuxyzb`.**
+> This describes the deployed architecture on the `supabase-backend-migration` branch. Ali accepted it verbally; written confirmation is pending ([ADR 0001](adr/0001-supabase-backend.md)). `main` retains the Fastify implementation. Migrations 001-005 are applied to the active project; the booking handoff function update still awaits deployment access (HTTP 403 from the current CLI account). See [migration status](SUPABASE_MIGRATION_STATUS.md).
 
 Backend runtime = Supabase: Auth (customers and admins), Postgres + RLS, Edge Functions (`soflo-api`, `cron-worker`, `health`), Storage (`gallery`), Cron. Urable stays the authority for customers, vehicles, services, jobs and payments. Brevo stays the sender for Auth mail through Supabase's custom SMTP.
 
@@ -28,7 +28,7 @@ npm run check:functions   # Deno type-check of the three functions
 
 `test:db` replays every migration in `supabase/migrations` on PGlite (in-process Postgres) and runs the anon / customer A / customer B / deleted / admin / service-role matrix. `test:functions` runs the real function handlers against that same schema over a Postgres socket, with Urable, Auth, Storage and Expo faked. PGlite is a single-connection engine: it proves SQL semantics and the replay, **not** concurrency under load or platform behaviour. To run the full stack, start Docker and use `supabase start` (config in `supabase/config.toml`).
 
-## 3. Staging first (never the active project)
+## 3. Reproduce in a staging project
 
 ```bash
 supabase login
@@ -54,7 +54,7 @@ SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... ADMIN_EMAIL=owner@example.com ADM
 
 ## 4. Existing customers
 
-Passwords cannot be moved (Supabase Auth does not accept our bcrypt hashes and no plaintext exists). `scripts/supabase/migrate-legacy-users.mjs` creates a passwordless, pre-confirmed Auth identity per legacy customer and sets `users.auth_user_id`, keeping every `users.id`, Urable link, point, redemption and referral. Customers then choose a password through **Forgot password**. Dry run is the default; do one account (`--apply --limit 1`) end to end before the rest. Count real accounts first (see the status file: the live audit is still outstanding).
+Passwords cannot be moved (Supabase Auth does not accept our bcrypt hashes and no plaintext exists). `scripts/supabase/migrate-legacy-users.mjs` creates a passwordless, pre-confirmed Auth identity per legacy customer and sets `users.auth_user_id`, keeping every `users.id`, Urable link, point, redemption and referral. Customers then choose a password through **Forgot password**. Dry run is the default; do one account (`--apply --limit 1`) end to end before the rest. The active project audit found no preexisting users, so this script was not run there.
 
 ## 5. Access model (summary)
 

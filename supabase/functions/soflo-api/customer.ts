@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import type { Customer } from '../_shared/session.ts';
-import { requireCustomer } from '../_shared/session.ts';
+import { identify, requireCustomer } from '../_shared/session.ts';
 import { HttpError, notFound } from '../_shared/errors.ts';
 import { ownsJob, isDoneStatus } from '../_shared/sync.ts';
+import { jobVehicleId, recordJob } from '../_shared/sync.ts';
+import { findBookingHandoff } from '../_shared/booking-handoff.ts';
 import type { UrableJob, UrableVehicle } from '../_shared/urable.ts';
 import type { Router } from './router.ts';
 import { reply } from './router.ts';
@@ -33,7 +35,11 @@ function booking(job: UrableJob, vehicles: UrableVehicle[]) {
 /** Urable job -> only if it belongs to this customer; otherwise indistinguishable from "missing". */
 async function ownedJob(c: { deps: import('../_shared/deps.ts').Deps }, user: Customer, id: string): Promise<UrableJob> {
   const job = await c.deps.urable().getJob(id).catch((e) => { if ((e as { status?: number }).status === 404) return null; throw e; });
-  if (!job || !ownsJob(job, user.urableCustomerId)) throw notFound('Booking');
+  if (!job) throw notFound('Booking');
+  if (!ownsJob(job, user.urableCustomerId)) {
+    const [link] = await c.deps.sql`SELECT 1 FROM job_sync WHERE user_id = ${user.id} AND urable_job_id = ${id}`;
+    if (!link) throw notFound('Booking');
+  }
   return job;
 }
 
@@ -73,10 +79,72 @@ export function customerRoutes(app: Router) {
     return { ok: true };
   });
 
+  app.post('/bookings/handoff', async ({ req, deps }) => {
+    const user = await requireCustomer(req, deps);
+    const identity = await identify(req, deps);
+    if (!identity.emailConfirmed || identity.email.toLowerCase() !== user.email.toLowerCase())
+      throw new HttpError(403, 'EMAIL_NOT_VERIFIED', 'Verify your account email before booking.');
+    const urable = deps.urable();
+    const customers = await urable.findCustomersByEmail(user.email);
+    const customerIds = new Set([user.urableCustomerId, ...customers.filter((c) =>
+      c.email?.trim().toLowerCase() === user.email.toLowerCase() ||
+      c.emails?.some((e) => e.value.trim().toLowerCase() === user.email.toLowerCase())
+    ).map((c) => c.id)]);
+    const existing = new Set<string>();
+    for (const id of customerIds) for (const job of await urable.listJobs(id)) existing.add(job.id);
+    const [attempt] = await deps.sql`INSERT INTO booking_handoffs (user_id, existing_job_ids)
+      VALUES (${user.id}, ${[...existing]}) RETURNING id, expires_at AS "expiresAt"`;
+    return reply({ attemptId: attempt.id, expiresAt: attempt.expiresAt }, 201);
+  });
+  app.get('/bookings/handoff/:id', async ({ req, deps, params, url }) => {
+    const user = await requireCustomer(req, deps);
+    const identity = await identify(req, deps);
+    if (!identity.emailConfirmed || identity.email.toLowerCase() !== user.email.toLowerCase())
+      throw new HttpError(403, 'EMAIL_NOT_VERIFIED', 'Verify your account email before checking a booking.');
+    const { id } = z.object({ id: z.uuid() }).parse(params);
+    const [attempt] = await deps.sql`SELECT id, started_at AS "startedAt", expires_at AS "expiresAt",
+      existing_job_ids AS "existingJobIds", matched_job_id AS "matchedJobId"
+      FROM booking_handoffs WHERE id = ${id} AND user_id = ${user.id}`;
+    if (!attempt) throw notFound('Booking check');
+    if (attempt.matchedJobId) {
+      const job = await ownedJob({ deps }, user, attempt.matchedJobId as string);
+      return { state: 'matched', booking: booking(job, await deps.urable().listVehicles(user.urableCustomerId)) };
+    }
+    if (new Date(attempt.expiresAt as string).getTime() < Date.now()) return { state: 'expired' };
+    const number = url.searchParams.get('confirmationNumber');
+    const confirmationNumber = number === null ? undefined : z.coerce.number().int().positive().parse(number);
+    const result = await findBookingHandoff(deps.urable(), {
+      verifiedEmail: user.email,
+      originalCustomerId: user.urableCustomerId,
+      startedAt: new Date(attempt.startedAt as string).getTime(),
+      existingJobIds: new Set(attempt.existingJobIds as string[]), confirmationNumber,
+    });
+    if (result.state === 'none') return { state: 'pending' };
+    if (result.state === 'ambiguous') return { state: 'ambiguous' };
+    const job = await deps.urable().getJob(result.candidate.jobId);
+    if (!jobVehicleId(job)) return { state: 'pending' };
+    await recordJob(deps, user.id, job);
+    const [link] = await deps.sql`SELECT 1 FROM job_sync WHERE user_id = ${user.id} AND urable_job_id = ${job.id}`;
+    if (!link) return { state: 'ambiguous' };
+    await deps.sql`UPDATE booking_handoffs SET matched_job_id = ${job.id} WHERE id = ${id} AND user_id = ${user.id} AND matched_job_id IS NULL`;
+    return { state: 'matched', booking: booking(job, await deps.urable().listVehicles(user.urableCustomerId)) };
+  });
   app.get('/bookings', async ({ req, deps }) => {
     const user = await requireCustomer(req, deps); const urable = deps.urable();
-    const [jobs, vehicles] = await Promise.all([urable.listJobs(user.urableCustomerId), urable.listVehicles(user.urableCustomerId)]);
-    return jobs.filter((j) => ownsJob(j, user.urableCustomerId)).map((j) => booking(j, vehicles));
+    const [jobs, vehicles, links] = await Promise.all([
+      urable.listJobs(user.urableCustomerId), urable.listVehicles(user.urableCustomerId),
+      deps.sql`SELECT urable_job_id FROM job_sync WHERE user_id = ${user.id}`,
+    ]);
+    const owned = jobs.filter((j) => ownsJob(j, user.urableCustomerId));
+    const seen = new Set(owned.map((j) => j.id));
+    for (const link of links) {
+      const id = link.urable_job_id as string;
+      if (!seen.has(id)) {
+        const job = await urable.getJob(id).catch((e) => { if ((e as { status?: number }).status === 404) return null; throw e; });
+        if (job) { owned.push(job); seen.add(id); }
+      }
+    }
+    return owned.map((j) => booking(j, vehicles));
   });
   app.get('/bookings/:id', async (c) => {
     const user = await requireCustomer(c.req, c.deps); const { id } = idParam.parse(c.params);
@@ -103,8 +171,22 @@ export function customerRoutes(app: Router) {
 
   app.get('/payments', async ({ req, deps }) => {
     const user = await requireCustomer(req, deps);
-    return (await deps.urable().listPayments(user.urableCustomerId))
-      .filter((p) => p.customerRef === user.urableCustomerId || p.customerRef?.endsWith('/' + user.urableCustomerId))
+    const urable = deps.urable();
+    const payments = (await urable.listPayments(user.urableCustomerId))
+      .filter((p) => p.customerRef === user.urableCustomerId || p.customerRef?.endsWith('/' + user.urableCustomerId));
+    const links = await deps.sql`SELECT urable_job_id FROM job_sync WHERE user_id = ${user.id}`;
+    const linkedIds = new Set(links.map((x) => x.urable_job_id as string));
+    const duplicateCustomers = new Set<string>();
+    for (const id of linkedIds) {
+      const job = await urable.getJob(id).catch((e) => { if ((e as { status?: number }).status === 404) return null; throw e; });
+      if (job?.customerRef && !ownsJob(job, user.urableCustomerId)) duplicateCustomers.add(job.customerRef.split('/').at(-1)!);
+    }
+    for (const customerId of duplicateCustomers) {
+      for (const p of await urable.listPayments(customerId)) {
+        if (p.jobOrderRefs?.some((ref) => [...linkedIds].some((id) => refMatches(ref, id)))) payments.push(p);
+      }
+    }
+    return [...new Map(payments.map((p) => [p.id, p])).values()]
       .map((p) => ({ id: p.id, status: p.status, totalCents: p.total, jobIds: p.jobOrderRefs }));
   });
 

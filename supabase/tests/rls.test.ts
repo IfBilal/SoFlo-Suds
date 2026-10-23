@@ -3,7 +3,7 @@ import { before, describe, test } from 'node:test';
 import type { PGlite } from '@electric-sql/pglite';
 import { A, B, as, denied, freshDb, ids, seed } from './harness.ts';
 
-const ALL_TABLES = ['users', 'refresh_sessions', 'password_resets', 'admins', 'job_sync', 'booking_idempotency', 'settings', 'promo_codes', 'promo_uses', 'points_ledger', 'rewards', 'reward_redemptions', 'referrals', 'reviews', 'gallery', 'warranties', 'shop_products', 'push_tokens', 'notification_log', 'admin_audit', 'sync_state'];
+const ALL_TABLES = ['users', 'refresh_sessions', 'password_resets', 'admins', 'job_sync', 'booking_idempotency', 'booking_handoffs', 'settings', 'promo_codes', 'promo_uses', 'points_ledger', 'rewards', 'reward_redemptions', 'referrals', 'reviews', 'gallery', 'warranties', 'shop_products', 'push_tokens', 'notification_log', 'admin_audit', 'sync_state'];
 
 let db: PGlite;
 before(async () => { db = await freshDb(); await seed(db); });
@@ -62,7 +62,7 @@ describe('customer A', () => {
     assert.deepEqual((await as<{ name: string }>(db, 'authenticated', ids.authA, 'SELECT name FROM shop_products')).map((r) => r.name), ['Soap']);
   });
   test('cannot read tables with no grant (job_sync, push_tokens, settings, admins)', async () => {
-    for (const t of ['job_sync', 'push_tokens', 'settings', 'admins', 'notification_log', 'admin_audit', 'booking_idempotency', 'promo_uses', 'referrals']) {
+    for (const t of ['job_sync', 'push_tokens', 'settings', 'admins', 'notification_log', 'admin_audit', 'booking_idempotency', 'booking_handoffs', 'promo_uses', 'referrals']) {
       assert.ok(await denied(as(db, 'authenticated', ids.authA, `SELECT * FROM ${t}`)), t);
     }
   });

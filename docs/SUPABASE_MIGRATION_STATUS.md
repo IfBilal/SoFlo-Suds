@@ -1,19 +1,21 @@
 # Supabase migration status (redacted)
 
-Branch `supabase-backend-migration`. `main` is untouched. **Nothing in this file has been applied to the active Supabase project, no real users were migrated, and `apps/api` (Fastify) is still in the repo and unmodified.** No credentials, emails or customer data appear here.
+Branch `supabase-backend-migration`. `main` is untouched. The original four migrations, three Edge Functions and Cron are live on the active Supabase project. Migration 005 (booking handoff attempts) is also live, but the updated `soflo-api` and `cron-worker` functions are **not deployed**: the available Supabase CLI account gets HTTP 403 for this project. No real users were migrated. `apps/api` (Fastify) remains in the repo. No credentials or customer data appear here.
 
-Last updated: 22 October 2026.
+Last updated: 23 October 2026.
+
+The installed-app, real Urable and release checklist is in [END_TO_END_QA.md](END_TO_END_QA.md).
 
 ## Gate summary
 
 | Gate | State | Evidence |
 | --- | --- | --- |
 | 0 Baseline audit, backup/restore, staging | **Audit done; backup unnecessary (no data); no staging** | Live audit 22 Oct 2026 below. Docker unavailable (no sudo) |
-| 1 Schema, RLS, SQL functions | **Passed locally (PGlite)** | `npm run test:db`: 51/51 |
-| 2 Routes ported with own/wrong-user tests | **Passed locally (fakes for Urable/Auth/Expo)** | `npm run test:functions`: 11 tests, 42 steps. Real Urable reads **not** re-verified |
-| 3 Mobile + admin without Fastify | **Builds only** | mobile typecheck + Android export, admin build. No device, no email round trip, no laptop-off/mobile-data test, no visual regression |
-| 4 Cron/sync/push | **Passed locally** | replay/partial-failure/lease/cursor tests. No real Cron run, no push to a device |
-| 5/6 Cutover, APK, rollback drill | **Not started** | Architecture accepted 22 Oct 2026 ([ADR 0001](adr/0001-supabase-backend.md)); still needs audit, backup/restore proof and staging |
+| 1 Schema, RLS, SQL functions | **Live; new handoff table live** | `npm run test:db`: 52/52; migrations 001-005 applied remotely |
+| 2 Routes ported with own/wrong-user tests | **Local passed; handoff update awaiting deploy** | `npm run test:functions`: 14 tests, 42 steps. Real checkout still unverified |
+| 3 Mobile + admin without Fastify | **Built; device proof pending** | mobile/admin typecheck pass, admin hosted; Android preview APK build finished for earlier commit. No device or email round trip |
+| 4 Cron/sync/push | **Original worker live; linked-job update awaiting deploy** | Local replay/partial-failure/lease/cursor tests pass; push not proven on device |
+| 5/6 Release, rollback drill | **Open** | Android real-device QA, checkout/payment proof, push credentials, store submissions and rollback drill remain |
 
 ## Live audit, 22 Oct 2026 (read-only, counts only)
 
@@ -25,23 +27,26 @@ Migrations 001-004 recorded in migration history; extensions `pg_net`, `pg_cron`
 
 **Live smoke test (18/18 passed)** with marked QA accounts (placeholder Urable id, so nothing created in Urable), all removed afterward (users, admins, Auth users, audit = 0): sign-in, `PROFILE_INCOMPLETE` then idempotent `/me/complete`, `/me`, `/rewards`, `/vehicles`, customer blocked from admin, RLS own-row only and protected column denied, `shop_config`, admin `/admin/me` + dashboard, admin identity is not a customer, deactivated admin blocked at once, account deletion, deleted token rejected.
 
-Still open: owner admin not created (email/password not provided); real signup email round trip, device checks, APK, admin hosting.
+This is the historical 22 October smoke test. Since then, an owner admin was created, admin hosting was deployed, and an Android preview APK build finished. Real signup email round trip and device checks remain open.
 
 ## Phase log (code changed → where applied → tests → device → blocker → rollback)
 
-**Phase 1** — `supabase/migrations/20261022000001..4`. Additive: `users/admins.auth_user_id` (unique), nullable password hashes, `soflo_private` schema, revoked all default client grants, column-limited own/public reads, `shop_config()` RPC, `complete_profile`, `redeem_reward`, `record_job` (credit-once, referral settlement for both sides, refund reversal), `delete_account`, sync lease, `push_tickets`. Applied: local PGlite only. Tests: `supabase/tests/{rls,functions}.test.ts`. Rollback: nothing deployed; if later deployed, columns/policies are safe to leave.
+**Phase 1** — `supabase/migrations/20261022000001..4`. Additive: `users/admins.auth_user_id` (unique), nullable password hashes, `soflo_private` schema, revoked all default client grants, column-limited own/public reads, `shop_config()` RPC, `complete_profile`, `redeem_reward`, `record_job` (credit-once, referral settlement for both sides, refund reversal), `delete_account`, sync lease, `push_tickets`. Applied to the active project on 22 October; local PGlite replay and RLS matrix pass. Rollback: leave additive tables/policies and redeploy the prior functions if needed.
 
-**Phase 2** — mobile `lib/{supabase,api,session}.ts`, signup verify screen, reset by `code`; admin `src/supabase.ts` + `main.tsx`; `POST /me/complete` (idempotent, Urable id kept in server-only `app_metadata` so retries never duplicate); `scripts/supabase/{bootstrap-admin,migrate-legacy-users}.mjs` (**syntax-checked only, never run**). Applied: none. Rollback: `main`.
+**Phase 2** — mobile `lib/{supabase,api,session}.ts`, signup verify screen, reset by `code`; admin `src/supabase.ts` + `main.tsx`; `POST /me/complete` (idempotent, Urable id kept in server-only `app_metadata` so retries never duplicate); `scripts/supabase/{bootstrap-admin,migrate-legacy-users}.mjs`. The owner admin was bootstrapped. Legacy migration was not run because the live project had no users. Rollback: use the `main` client with its Fastify backend if that environment is available.
 
 **Phase 3** — `supabase/functions/soflo-api` (account, customer, admin routers), `_shared` (Urable adapter ported verbatim, handoff selector, session/role resolution, errors). Every route in `apps/api/src/routes/*` has an equivalent except `/auth/*` (Supabase Auth) and `/admin/login` (Supabase Auth); `/config` became the `shop_config()` RPC; `/admin/me` is new.
 
 **Phase 4** — `cron-worker` (secret-authenticated; sync batch with lease+cursor, reminders, Expo receipts), `supabase/cron/schedule.sql` (manual, per environment).
 
+**Phase 5, 23 October** — Added `booking_handoffs` with default-deny RLS, `POST /bookings/handoff` and `GET /bookings/handoff/:id`, mobile checkout/check UI, duplicate-customer job ownership mapping, linked payment history, and linked job polling for points/status. Local tests and typechecks pass. Migration 005 was applied to the active project. Deploying the changed functions failed with Supabase HTTP 403 because the CLI login cannot access this project; until deployment, the live API returns 404 for the new handoff routes. No real booking or payment was made.
+The updated booking browser interaction passed with mocked network responses (`node scripts/qa-booking-web.mjs` while Expo web runs on port 8082); it is not proof of a native WebView or real payment.
+
 ## Verified commands (this machine)
 
 ```
-npm run test:db          51 passed
-npm run test:functions   11 passed (42 steps)
+npm run test:db          52 passed
+npm run test:functions   14 passed (42 steps)
 npm run check:functions  deno check OK
 npm run typecheck        api, mobile, admin OK
 npm run build            api, admin OK
@@ -51,16 +56,16 @@ mobile: npx expo-doctor  19/21; the 2 failures are Expo API lookups that timed o
 
 ## Known gaps and decisions needed
 
-1. **Live audit (Phase 0)** — counts of real users/admins/sessions/points/reviews/storage objects, Auth settings (email confirmation, SMTP, redirect URLs), extension availability, current grants/policies. Needs permission to run read-only queries against the active project (or the Supabase MCP after a restart), or a staging project.
+1. **Live audit (Phase 0)** — completed on 22 October: no preexisting app users or data. An owner admin was added later. Recheck counts before final release.
 2. **Staging** — Docker (`sudo snap start docker`) for `supabase start`, or a separate Supabase staging project (may cost money; needs approval).
 3. **Gateway JWT + new key format** — `soflo-api` keeps `verify_jwt = true` as required. If the project uses the new publishable/secret key format with asymmetric JWT signing keys, the platform gateway may reject user JWTs; confirm on staging, and if so verify in-function only (already done via `auth.getUser`) and document the change.
 4. **Referral reward amount** — settled from setting `referral_reward_points` (default 0 = marks rewarded, no points). Handbook amount unconfirmed.
 5. **Refund handling** assumes Urable reports `paymentStatus = "refunded"`; unverified against Urable.
 6. **Promo codes** are admin-managed only; reservation/consumption cannot be applied to Urable virtual-shop payments (documented API limit). Not faked.
-7. **Booking/payment linkage** — `booking-handoff` selector is ported and tested but not yet exposed as a route or used by the UI (it was not wired in `main` either). Real paid checkout and return linkage remain unverified.
-8. **Push** — needs an EAS project id, FCM/APNs credentials and a development build; Expo Go cannot test it.
+7. **Booking/payment linkage** — route and UI are implemented and locally tested, including duplicate Urable customer records and later payment/status sync. Function deploy is blocked by CLI access (403). Real paid checkout and return linkage remain unverified.
+8. **Push** — EAS project exists; FCM/APNs credentials and a development build are still needed. Expo Go cannot test remote push.
 9. **Account deletion** removes the Auth identity and anonymizes at once; already-issued access tokens stop working immediately because `soflo-api` re-checks the profile every call (tested). Tokens used directly against Supabase REST until expiry see nothing (RLS requires an undeleted profile).
-10. **Visual regression** not run (needs a device or browser with a backend). UI changes: new "Check your email" state on signup only.
+10. **Visual regression** — existing browser comparison is recorded in `docs/visual-validation/`; the new booking handoff screen and all native interactions need device review.
 11. **Warranty documents** — private bucket + signed URLs still unbuilt.
 12. `apps/api`, its docs and Fastify scripts remain until Ali approves; remove at cutover only.
 

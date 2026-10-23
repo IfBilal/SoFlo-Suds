@@ -2,7 +2,7 @@ import postgres from 'postgres';
 import { PGLiteSocketServer } from '@electric-sql/pglite-socket';
 import { freshDb, ids, seed } from '../../tests/harness.ts';
 import type { Deps, AuthIdentity, PushMessage } from '../_shared/deps.ts';
-import type { UrableClient, UrableJob, UrableVehicle } from '../_shared/urable.ts';
+import type { UrableClient, UrableCustomer, UrableJob, UrablePayment, UrableVehicle } from '../_shared/urable.ts';
 import { buildRouter } from '../soflo-api/app.ts';
 
 export { ids };
@@ -15,6 +15,7 @@ export class FakeUrable {
   failFor = new Set<string>();
   createdCustomers = 0;
   failCreateOnce = false;
+  customers: UrableCustomer[] = [];
   vehicles: Record<string, UrableVehicle[]> = {
     uA: [{ id: 'vA', name: '2020 Honda Civic', customerRef: 'uA', notes: 'Color: Blue' }],
     uB: [{ id: 'vB', name: '2019 Ford F150', customerRef: 'uB' }],
@@ -23,6 +24,7 @@ export class FakeUrable {
     { id: 'jobA', customerRef: 'uA', itemRefs: ['vA'], status: 'completed', paymentStatus: 'paid', start: 1_800_000_000_000, invoice: { amountPaid: 10000, items: {} } },
     { id: 'jobB', customerRef: 'uB', itemRefs: ['vB'], status: 'scheduled', paymentStatus: 'unpaid', start: 1_900_000_000_000 },
   ];
+  payments: UrablePayment[] = [{ id: 'p1', customerRef: 'uA', total: 100, status: 'paid' }, { id: 'pX', customerRef: 'uB', total: 5 }];
   listServices() { return Promise.resolve([{ id: 's1', name: 'Wash', type: 'service' as const, categoryName: 'Washes', prices: [{ value: 5000 }], virtualShop: true }]); }
   listAllServices() { return this.listServices(); }
   listShopProducts() { return Promise.resolve([]); }
@@ -30,12 +32,14 @@ export class FakeUrable {
   createVehicle(i: { customerId: string; name: string }) { this.calls.push('createVehicle:' + i.customerId); return Promise.resolve('vNew'); }
   updateVehicle(id: string) { this.calls.push('updateVehicle:' + id); return Promise.resolve(); }
   deleteVehicle(id: string) { this.calls.push('deleteVehicle:' + id); return Promise.resolve(); }
-  listPayments() { return Promise.resolve([{ id: 'p1', customerRef: 'uA', total: 100, status: 'paid' }, { id: 'pX', customerRef: 'uB', total: 5 }]); }
+  listPayments(c: string) { return Promise.resolve(this.payments.filter((p) => p.customerRef === c)); }
   listJobs(c: string) { if (this.failFor.has(c)) throw new Error('urable down'); return Promise.resolve(this.jobs.filter((j) => j.customerRef === c).concat(c === 'uA' ? [{ id: 'foreign', customerRef: 'uB', itemRefs: ['vB'], status: 'scheduled' }] : [])); }
   getJob(id: string) { const j = this.jobs.find((x) => x.id === id); return j ? Promise.resolve(j) : Promise.reject(Object.assign(new Error('nf'), { status: 404 })); }
   createCustomer() { if (this.failCreateOnce) { this.failCreateOnce = false; throw new Error('urable down'); } this.createdCustomers++; return Promise.resolve('uNew' + this.createdCustomers); }
   cancelJob(id: string) { this.calls.push('cancelJob:' + id); return Promise.resolve(); }
-  findCustomersByEmail() { return Promise.resolve([]); }
+  findCustomersByEmail(email: string) { return Promise.resolve(this.customers.filter((c) =>
+    c.email?.toLowerCase() === email.toLowerCase() || c.emails?.some((e) => e.value.toLowerCase() === email.toLowerCase())
+  )); }
 }
 
 export const identities: Record<string, AuthIdentity> = {

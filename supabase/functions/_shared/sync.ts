@@ -46,9 +46,20 @@ export async function syncJobsBatch(deps: Deps, opts: { budgetMs?: number; batch
       for (const user of users) {
         cursor = user.id as string; stats.users++;
         try {
-          for (const job of await urable.listJobs(user.urable_customer_id as string)) {
+          const jobs = await urable.listJobs(user.urable_customer_id as string);
+          const seen = new Set<string>();
+          for (const job of jobs) {
             if (!ownsJob(job, user.urable_customer_id as string)) continue;
+            seen.add(job.id);
             await recordJob(deps, user.id as string, job); stats.jobs++;
+          }
+          // Virtual-shop checkout can create a duplicate Urable customer. Jobs
+          // linked by a verified handoff still need payment/status polling.
+          const linked = await sql`SELECT urable_job_id FROM job_sync WHERE user_id = ${user.id}`;
+          for (const row of linked) {
+            const id = row.urable_job_id as string;
+            if (seen.has(id)) continue;
+            await recordJob(deps, user.id as string, await urable.getJob(id)); stats.jobs++;
           }
         } catch { stats.failed++; } // partial Urable failure: keep going, retry on the next cycle
         if (now() - started >= budget) break;
