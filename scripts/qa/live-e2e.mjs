@@ -95,6 +95,7 @@ if (jobId) await urable('PATCH', '/jobs/' + jobId, { status: 'canceled', cancele
 if (promoId) { await admin.from('promo_uses').delete().eq('promo_id', promoId); await admin.from('promo_codes').delete().eq('id', promoId); }
 await admin.from('promo_attempts').delete().eq('user_id', userId ?? '00000000-0000-0000-0000-000000000000');
 await admin.from('settings').delete().eq('key', 'maintenance_message');
+if (userId) { for (const t of ['booking_handoffs', 'job_sync', 'points_ledger', 'reward_redemptions', 'reviews', 'push_tokens']) await admin.from(t).delete().eq('user_id', userId); await admin.from('referrals').delete().or(`referrer_id.eq.${userId},referee_id.eq.${userId}`); await admin.from('users').delete().eq('id', userId); }
 if (authId) await admin.auth.admin.deleteUser(authId).catch(() => {});
 for (const [s, n, d] of results) console.log(`${s}  ${n}${d ? '  — ' + d : ''}`);
 console.log(`\n${results.length - failed}/${results.length} passed`);
