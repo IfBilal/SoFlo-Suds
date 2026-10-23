@@ -117,4 +117,5 @@ Signup confirmation previously redirected to `soflosuds://reset`, which opens th
 - **Review prompt push** 2 hours after a job completes, once per job, skipped if already reviewed (migration 009 `job_sync.completed_at`; `cron-worker` step `reviewPrompts`).
 - **Day-before reminder** now fires on the shop's local date-before once `reminder_hour_local` (default 9) has passed, in `shop_timezone`, instead of a fixed 20–28 h window.
 - Tests: 19 function tests (54 steps), 7 app-logic tests, 55 database tests.
-- Still not built from the handbook: "add to calendar" on the booking-confirmed screen; same-device / same-payment-name referral checks.
+- "Add to calendar" (web calendar link, no extra permission) on the matched booking and booking detail screens; unit-tested.
+- Still not built from the handbook: same-device / same-payment-name referral checks.
