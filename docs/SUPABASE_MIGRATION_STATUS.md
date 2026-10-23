@@ -13,7 +13,7 @@ The installed-app, real Urable and release checklist is in [END_TO_END_QA.md](EN
 | 0 Baseline audit, backup/restore, staging | **Audit done; backup unnecessary (no data); no staging** | Live audit 22 Oct 2026 below. Docker unavailable (no sudo) |
 | 1 Schema, RLS, SQL functions | **Live; new handoff table live** | `npm run test:db`: 52/52; migrations 001-005 applied remotely |
 | 2 Routes ported with own/wrong-user tests | **Local passed; handoff update awaiting deploy** | `npm run test:functions`: 14 tests, 43 steps. Real checkout still unverified |
-| 3 Mobile + admin without Fastify | **Built; device proof pending** | mobile/admin typecheck pass, admin hosted; Android preview APK build finished for earlier commit. No device or email round trip |
+| 3 Mobile + admin without Fastify | **Built; device proof pending** | mobile/admin typecheck pass, admin hosted; APK `ff0e7241-0875-4f4e-854a-525d83d00756` finished from `ccf4727`, a newer build from `f4cb7e2` was requested. No device or email round trip |
 | 4 Cron/sync/push | **Original worker live; linked-job update awaiting deploy** | Local replay/partial-failure/lease/cursor tests pass; push not proven on device |
 | 5/6 Release, rollback drill | **Open** | Android real-device QA, checkout/payment proof, push credentials, store submissions and rollback drill remain |
 
