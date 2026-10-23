@@ -4,7 +4,7 @@ import { identify, requireCustomer } from '../_shared/session.ts';
 import { HttpError, notFound } from '../_shared/errors.ts';
 import { ownsJob, isDoneStatus } from '../_shared/sync.ts';
 import { jobVehicleId, recordJob } from '../_shared/sync.ts';
-import { findBookingHandoff } from '../_shared/booking-handoff.ts';
+import { customerHasEmail, findBookingHandoff } from '../_shared/booking-handoff.ts';
 import type { UrableJob, UrableVehicle } from '../_shared/urable.ts';
 import type { Router } from './router.ts';
 import { reply } from './router.ts';
@@ -93,14 +93,11 @@ export function customerRoutes(app: Router) {
       throw new HttpError(403, 'EMAIL_NOT_VERIFIED', 'Verify your account email before booking.');
     const urable = deps.urable();
     const customers = await urable.findCustomersByEmail(user.email);
-    const customerIds = new Set([user.urableCustomerId, ...customers.filter((c) =>
-      c.email?.trim().toLowerCase() === user.email.toLowerCase() ||
-      c.emails?.some((e) => e.value.trim().toLowerCase() === user.email.toLowerCase())
-    ).map((c) => c.id)]);
+    const customerIds = new Set([user.urableCustomerId, ...customers.filter((c) => customerHasEmail(c, user.email)).map((c) => c.id)]);
     const existing = new Set<string>();
     for (const id of customerIds) for (const job of await urable.listJobs(id)) existing.add(job.id);
     const [attempt] = await deps.sql`INSERT INTO booking_handoffs (user_id, existing_job_ids)
-      VALUES (${user.id}, ${[...existing]}) RETURNING id, expires_at AS "expiresAt"`;
+      VALUES (${user.id}, ${deps.sql.array([...existing], 25)}) RETURNING id, expires_at AS "expiresAt"`;
     return reply({ attemptId: attempt.id, expiresAt: attempt.expiresAt }, 201);
   });
   app.get('/bookings/handoff/latest', async ({ req, deps }) => {

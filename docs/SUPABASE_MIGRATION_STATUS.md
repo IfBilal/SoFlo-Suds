@@ -81,3 +81,21 @@ mobile: npx expo-doctor  19/21; the 2 failures are Expo API lookups that timed o
 - `soflo-api` and `cron-worker` redeployed (both now version 3) from `supabase-backend-migration` with `supabase functions deploy --use-api`, using the owner's access token supplied in the shell only. `health` unchanged. Migrations were not rerun.
 - Route check: `GET /bookings/handoff/latest` with no token returns 401 UNAUTHORIZED; with the admin token it returns PROFILE_INCOMPLETE (a customer-only route, so the route exists and runs the customer check); `/admin/me` still 200. This shows the routes are deployed, not that the live Urable handoff matches real checkouts; that still needs a real-device test.
 - Cron after deploy: see the check below.
+
+## Live end-to-end test as a user and admin (2026-10-23)
+`node scripts/qa/live-e2e.mjs` (needs the project URL, publishable key, service key, Urable key and admin login in the environment) runs the real flows against the live Supabase project and the shop's real Urable account. **27 of 27 steps pass.** It creates one confirmed TEST customer (standing in for the email-link click, since a real inbox is needed for that), far-future *unpaid* TEST jobs that it cancels, and a TEST promo; it never pays anything. What it proved:
+- sign-in, wrong password rejected, profile completion creating a **real Urable customer**, idempotent retry, `/me`;
+- 49 real services, vehicle add/edit in Urable, every customer read route, notification preference save, RLS (anon cannot read tables), customer blocked from admin;
+- owner admin sign-in and dashboard; admin-created promo; admin settings change reaching the public config (maintenance on/off);
+- **a 10% promo applied to a real Urable invoice** (subtotal 1995 → total 1795 cents), a second code refused, cancellation through the app confirmed canceled in Urable and the promo released;
+- **virtual-shop handoff on real data**: a duplicate Urable customer with the same email plus a new job is linked to the right app user (simulated checkout; no card, and not through the shop's own page);
+- another customer cannot see the job; account deletion kills the token.
+
+Two bugs only real data exposed and are now fixed with regression tests: Urable's customer `email` can be an object (`{label,value}`), and a job's `created` is `{uid,timestamp}`, not a number — the handoff matcher would have failed on both. Test residue (7 soft-deleted TEST users, handoffs, sync rows) was purged afterwards; Urable keeps the TEST customers it created (named `TEST Markhor E2E`, no delete call exists in the client) and every TEST job is canceled.
+
+Still not covered by this run: the email-confirmation click and password-reset link on a phone, the shop's own checkout page and card payment, paid-job points, push delivery.
+
+## Added in this pass
+- System screens: offline banner, maintenance screen (admin setting `maintenance_message`), forced-update screen (`min_app_version`). Migration 006. Unit-tested (`npm run test:mobile`).
+- Promo codes: `POST /bookings/:id/promo` (handbook 4.4 rules under a row lock, 10 wrong codes/hour limit, release on cancel or Urable failure, applied when Urable reports paid). Migration 007. Applies the discount through Urable's supported invoice adjustment.
+- Not built: native service/date/time/quote screens and `/availability` (Urable has no public slot or card-checkout API; the virtual shop remains the supported route, handbook Fallback A/B), promo entry UI in the app, shop products added to a booking.

@@ -1,4 +1,4 @@
-import { UrableClient, type UrableCustomer, type UrableJob } from './urable.ts';
+import { UrableClient, jobCreatedMs, type UrableCustomer, type UrableJob } from './urable.ts';
 
 export interface BookingHandoffAttempt {
   verifiedEmail: string;
@@ -21,9 +21,11 @@ export type BookingHandoffResult =
   | { state: 'ambiguous'; candidates: BookingCandidate[] }
   | { state: 'matched'; candidate: BookingCandidate };
 
-function customerHasEmail(customer: UrableCustomer, email: string): boolean {
-  const emails = [customer.email, ...(customer.emails ?? []).map((entry) => entry.value)];
-  return emails.some((value) => value?.trim().toLowerCase() === email);
+/** Urable's `email` field is not reliably a string; accept strings, objects with `value`, and the `emails` list. */
+export function customerHasEmail(c: { email?: unknown; emails?: unknown }, email: string): boolean {
+  const want = email.trim().toLowerCase();
+  const norm = (v: unknown) => typeof v === 'string' ? v.trim().toLowerCase() : v && typeof v === 'object' && typeof (v as { value?: unknown }).value === 'string' ? (v as { value: string }).value.trim().toLowerCase() : '';
+  return norm(c.email) === want || (Array.isArray(c.emails) && c.emails.some((e) => norm(e) === want));
 }
 
 export function selectBookingHandoff(
@@ -43,7 +45,8 @@ export function selectBookingHandoff(
     for (const job of jobsByCustomer.get(customer.id) ?? []) {
       if (job.customerRef !== customer.id && !job.customerRef?.endsWith('/' + customer.id)) continue;
       if (seenJobs.has(job.id) || attempt.existingJobIds.has(job.id)) continue;
-      if (typeof job.created !== 'number' || job.created < earliestCreated) continue;
+      const created = jobCreatedMs(job);
+      if (created === undefined || created < earliestCreated) continue;
       if (!['scheduled', 'in progress', 'completed'].includes(job.status)) continue;
       if (attempt.confirmationNumber !== undefined && job.num !== attempt.confirmationNumber) continue;
       seenJobs.add(job.id);

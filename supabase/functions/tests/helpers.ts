@@ -3,6 +3,7 @@ import { PGLiteSocketServer } from '@electric-sql/pglite-socket';
 import { freshDb, ids, seed } from '../../tests/harness.ts';
 import type { Deps, AuthIdentity, PushMessage } from '../_shared/deps.ts';
 import type { UrableClient, UrableCustomer, UrableJob, UrablePayment, UrableVehicle } from '../_shared/urable.ts';
+import { customerHasEmail } from '../_shared/booking-handoff.ts';
 import { buildRouter } from '../soflo-api/app.ts';
 
 export { ids };
@@ -44,9 +45,7 @@ export class FakeUrable {
     return Promise.resolve({ ...job, invoice: { ...job.invoice, total: sub - off } });
   }
   cancelJob(id: string) { this.calls.push('cancelJob:' + id); return Promise.resolve(); }
-  findCustomersByEmail(email: string) { return Promise.resolve(this.customers.filter((c) =>
-    c.email?.toLowerCase() === email.toLowerCase() || c.emails?.some((e) => e.value.toLowerCase() === email.toLowerCase())
-  )); }
+  findCustomersByEmail(email: string) { return Promise.resolve(this.customers.filter((c) => customerHasEmail(c, email))); }
 }
 
 export const identities: Record<string, AuthIdentity> = {

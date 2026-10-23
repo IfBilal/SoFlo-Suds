@@ -6,7 +6,7 @@ export type UrableCreated = { success: true; data: { id: string; num?: number } 
 
 export interface UrableCustomer {
   id: string;
-  email?: string;
+  email?: unknown; // not reliably a string in live Urable data
   firstName?: string;
   lastName?: string;
   emails?: Array<{ label: string; value: string }>;
@@ -55,7 +55,7 @@ export interface UrableJob {
   paymentStatus?: string;
   start?: number; // Unix milliseconds
   completedAt?: number; // Unix milliseconds
-  created?: number; // Unix milliseconds
+  created?: number | { timestamp?: number; uid?: string | null }; // live Urable sends the object form; ms either way
   invoice?: {
     subtotal?: number; // cents
     total?: number; // cents
@@ -70,6 +70,14 @@ export interface UrableJob {
       quantity?: number;
     }>>;
   };
+}
+
+/** Creation time in Unix ms from either Urable shape, or undefined. */
+export function jobCreatedMs(job: { created?: unknown }): number | undefined {
+  const c = job.created;
+  if (typeof c === 'number' && Number.isFinite(c)) return c;
+  const t = c && typeof c === 'object' ? (c as { timestamp?: unknown }).timestamp : undefined;
+  return typeof t === 'number' && Number.isFinite(t) ? t : undefined;
 }
 
 export interface CreateJobInput {

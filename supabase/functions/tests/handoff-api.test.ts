@@ -75,3 +75,39 @@ test('unverified or changed account email cannot claim a same-email Urable job',
     assert.equal((await t.call('POST', '/bookings/handoff', { token: 'tokA' })).json.error.code, 'EMAIL_NOT_VERIFIED');
   } finally { identities.tokA = original; }
 });
+
+test('a brand-new customer with no Urable jobs can start a handoff (empty snapshot)', async () => {
+  const saved = t.urable.jobs; t.urable.jobs = [];
+  try {
+    const r = await t.call('POST', '/bookings/handoff', { token: 'tokB' });
+    assert.equal(r.status, 201);
+    const [row] = await t.sql`SELECT cardinality(existing_job_ids) AS n FROM booking_handoffs WHERE id = ${r.json.attemptId}`;
+    assert.equal(row.n, 0);
+  } finally { t.urable.jobs = saved; }
+});
+
+test('Urable customers with unusual email shapes never crash matching', async () => {
+  const { customerHasEmail } = await import('../_shared/booking-handoff.ts');
+  assert.equal(customerHasEmail({ email: ' A@T.test ' }, 'a@t.test'), true);
+  assert.equal(customerHasEmail({ email: { label: 'Email', value: 'a@t.test' } }, 'a@t.test'), true);
+  assert.equal(customerHasEmail({ email: 42, emails: [null, { value: 'a@t.test' }] }, 'a@t.test'), true);
+  assert.equal(customerHasEmail({ email: ['a@t.test'], emails: 'x' }, 'a@t.test'), false);
+  assert.equal(customerHasEmail({}, 'a@t.test'), false);
+  const saved = t.urable.customers;
+  t.urable.customers = [{ id: 'weird', email: { value: 'a@t.test' } as unknown }, { id: 'weird2', email: 7 as unknown }];
+  try { assert.equal((await t.call('POST', '/bookings/handoff', { token: 'tokA' })).status, 201); } finally { t.urable.customers = saved; }
+});
+
+test('real Urable shapes: object `created` timestamp and object `email` still match a new job', async () => {
+  const { selectBookingHandoff } = await import('../_shared/booking-handoff.ts');
+  const now = Date.now();
+  const customers = [{ id: 'cReal', email: { label: 'Email', value: 'A@T.test' } as unknown }];
+  const job = { id: 'jReal', num: 77, customerRef: 'accounts/x/customers/cReal', status: 'scheduled', paymentStatus: 'unpaid', created: { uid: null, timestamp: now } };
+  const attempt = { verifiedEmail: 'a@t.test', startedAt: now - 1000, existingJobIds: new Set<string>() };
+  const hit = selectBookingHandoff(customers, new Map([['cReal', [job]]]), attempt);
+  assert.equal(hit.state, 'matched');
+  const old = selectBookingHandoff(customers, new Map([['cReal', [{ ...job, created: { timestamp: now - 3_600_000 } }]]]), attempt);
+  assert.equal(old.state, 'none');
+  const missing = selectBookingHandoff(customers, new Map([['cReal', [{ ...job, created: undefined }]]]), attempt);
+  assert.equal(missing.state, 'none');
+});
