@@ -128,16 +128,22 @@ export class UrableClient {
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const response = await this.fetcher(`${this.baseUrl}/v1${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        Accept: 'application/json',
-        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-      signal: AbortSignal.timeout(15_000),
-    });
+    let response: Response;
+    try {
+      response = await this.fetcher(`${this.baseUrl}/v1${path}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          Accept: 'application/json',
+          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch {
+      // Timeouts and connection failures are "Urable unavailable" (503, retryable), never an opaque 500.
+      throw new UrableError(503, 'Urable is unreachable');
+    }
     let payload: unknown;
     try {
       payload = await response.json();

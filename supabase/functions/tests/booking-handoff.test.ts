@@ -52,3 +52,11 @@ test('does not attach an old, cancelled, or different-email job', () => {
     existingJobIds: new Set<string>(),
   }), { state: 'none', candidates: [] });
 });
+
+test('a Urable timeout or connection failure becomes a 503 UrableError, not an unhandled error', async () => {
+  const { UrableClient, UrableError } = await import('../_shared/urable.ts');
+  for (const failure of [new DOMException('timed out', 'TimeoutError'), new TypeError('fetch failed')]) {
+    const client = new UrableClient('key', 'https://urable.example/api', () => Promise.reject(failure));
+    await assert.rejects(() => client.getJob('x'), (e: unknown) => e instanceof UrableError && e.status === 503);
+  }
+});

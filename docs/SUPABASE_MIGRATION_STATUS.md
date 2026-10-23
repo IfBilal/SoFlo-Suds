@@ -123,3 +123,4 @@ Signup confirmation previously redirected to `soflosuds://reset`, which opens th
 - **Contact screen fixed**: it called a `/config` route that no longer exists on the Supabase API; it now reads `shop_config`.
 - **Welcome screen** now has the handbook's 2–3 slides (certified team, protection, rewards).
 - Admin site redeployed with the new settings fields.
+- **Urable network failures** (timeout, connection reset) now surface as `URABLE_UNAVAILABLE` (503, retryable) instead of an opaque 500; one live run of the handoff start had returned a 500 intermittently (1 of 5 runs) and this is the likely cause (not reproduced on demand).
