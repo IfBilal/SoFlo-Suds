@@ -230,6 +230,18 @@ export class UrableClient {
     return result.data.id;
   }
 
+  /** PATCHing adjustments alone is ignored by Urable; the line items must be sent with them (verified live). */
+  async applyDiscount(job: UrableJob, discount: { percent: boolean; value: number }): Promise<UrableJob> {
+    const lineItems = Object.values(job.invoice?.items ?? {}).flat().map((i) => ({
+      productServiceId: i.productServiceId ?? i.productServiceRef ?? i.service?.id ?? i.product?.id ?? i.productRef ?? '', quantity: i.quantity ?? 1,
+    })).filter((i) => i.productServiceId);
+    if (!lineItems.length) throw new UrableError(422, 'Job has no line items to discount');
+    const result = await this.request<UrableItem<UrableJob>>('PATCH', `/jobs/${encodeURIComponent(job.id)}`, {
+      lineItems, adjustments: [...(job.invoice?.adjustments ?? []), { type: 'discount', value: discount.value, percent: discount.percent }],
+    });
+    return result.data;
+  }
+
   async cancelJob(jobId: string): Promise<void> {
     await this.request<UrableItem<UrableJob>>('PATCH', `/jobs/${encodeURIComponent(jobId)}`, {
       status: 'canceled',

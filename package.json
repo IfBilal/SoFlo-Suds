@@ -16,7 +16,8 @@
     "test:db": "tsx --test supabase/tests/*.test.ts",
     "test:functions": "deno test -A --config supabase/functions/tests/deno.json supabase/functions/tests/",
     "check:functions": "deno check --config supabase/functions/deno.json supabase/functions/soflo-api/index.ts supabase/functions/cron-worker/index.ts supabase/functions/health/index.ts",
-    "test:backend": "npm run test:db && npm run test:functions"
+    "test:backend": "npm run test:db && npm run test:functions && npm run test:mobile",
+    "test:mobile": "node --test apps/mobile/lib/system.test.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.10",

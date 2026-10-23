@@ -36,6 +36,13 @@ export class FakeUrable {
   listJobs(c: string) { if (this.failFor.has(c)) throw new Error('urable down'); return Promise.resolve(this.jobs.filter((j) => j.customerRef === c).concat(c === 'uA' ? [{ id: 'foreign', customerRef: 'uB', itemRefs: ['vB'], status: 'scheduled' }] : [])); }
   getJob(id: string) { const j = this.jobs.find((x) => x.id === id); return j ? Promise.resolve(j) : Promise.reject(Object.assign(new Error('nf'), { status: 404 })); }
   createCustomer() { if (this.failCreateOnce) { this.failCreateOnce = false; throw new Error('urable down'); } this.createdCustomers++; return Promise.resolve('uNew' + this.createdCustomers); }
+  failDiscount = false;
+  applyDiscount(job: UrableJob, d: { percent: boolean; value: number }) {
+    this.calls.push(`discount:${job.id}:${d.percent ? 'pct' : 'fix'}:${d.value}`);
+    if (this.failDiscount) return Promise.reject(Object.assign(new Error('urable down'), { status: 503 }));
+    const sub = job.invoice?.subtotal ?? 0; const off = d.percent ? Math.round(sub * d.value / 100) : d.value;
+    return Promise.resolve({ ...job, invoice: { ...job.invoice, total: sub - off } });
+  }
   cancelJob(id: string) { this.calls.push('cancelJob:' + id); return Promise.resolve(); }
   findCustomersByEmail(email: string) { return Promise.resolve(this.customers.filter((c) =>
     c.email?.toLowerCase() === email.toLowerCase() || c.emails?.some((e) => e.value.toLowerCase() === email.toLowerCase())

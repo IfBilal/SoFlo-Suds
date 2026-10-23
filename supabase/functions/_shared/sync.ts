@@ -1,3 +1,4 @@
+import { settlePromo } from './promo.ts';
 import type { Deps } from './deps.ts';
 import type { UrableJob } from './urable.ts';
 import { sendPushToUser } from './push.ts';
@@ -12,6 +13,7 @@ export interface SyncStats { users: number; jobs: number; failed: number; wrappe
 export async function recordJob(deps: Deps, userId: string, job: UrableJob): Promise<void> {
   const vehicle = jobVehicleId(job);
   if (!vehicle) return;
+  await settlePromo(deps.sql, job);
   const [row] = await deps.sql`SELECT soflo_private.record_job(${userId}, ${job.id}, ${vehicle}, ${job.status}, ${job.paymentStatus ?? null},
       ${job.start ? new Date(job.start) : null}, ${job.invoice?.amountPaid ?? 0}) AS r`;
   const r = row.r as { skipped?: boolean; isNew?: boolean; oldStatus?: string };

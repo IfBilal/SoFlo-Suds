@@ -9,6 +9,7 @@ import type { UrableJob, UrableVehicle } from '../_shared/urable.ts';
 import type { Router } from './router.ts';
 import { reply } from './router.ts';
 import { balance } from './account.ts';
+import { promoEligible, releasePromo, reservePromo } from '../_shared/promo.ts';
 
 const vehicleSchema = z.object({ make: z.string().trim().min(1).max(50), model: z.string().trim().min(1).max(50), year: z.number().int().min(1900).max(new Date().getFullYear() + 1), color: z.string().trim().min(1).max(50), plate: z.string().trim().max(20).optional() });
 const notes = (x: z.infer<typeof vehicleSchema>) => `Color: ${x.color}${x.plate ? `; Plate: ${x.plate}` : ''}`;
@@ -171,7 +172,22 @@ export function customerRoutes(app: Router) {
     const job = await ownedJob(c, user, id);
     if (isDoneStatus(job.status)) throw new HttpError(409, 'CANCEL_NOT_ALLOWED', 'This booking cannot be cancelled in the app.');
     await c.deps.urable().cancelJob(id);
+    await releasePromo(c.deps.sql, id);
     return { ok: true };
+  });
+  app.post('/bookings/:id/promo', async (c) => {
+    const user = await requireCustomer(c.req, c.deps); const { id } = idParam.parse(c.params);
+    const { code } = z.object({ code: z.string().trim().min(1).max(40) }).parse(await c.json());
+    const job = await ownedJob(c, user, id);
+    if (!promoEligible(job)) throw new HttpError(409, 'PROMO_NOT_APPLICABLE', 'Promo codes can only be added before payment.');
+    const promo = await reservePromo(c.deps.sql, user.id, code, id, job.invoice?.subtotal ?? 0);
+    try {
+      const updated = await c.deps.urable().applyDiscount(job, { percent: promo.percent, value: promo.value });
+      return { ok: true, discountCents: promo.discountCents, totalCents: updated.invoice?.total ?? Math.max(0, (job.invoice?.subtotal ?? 0) - promo.discountCents) };
+    } catch (e) {
+      await releasePromo(c.deps.sql, id); // never keep a reservation Urable did not honour
+      throw e;
+    }
   });
   app.post('/bookings/:id/review', async (c) => {
     const user = await requireCustomer(c.req, c.deps); const { id } = idParam.parse(c.params);
