@@ -12,7 +12,7 @@ The installed-app, real Urable and release checklist is in [END_TO_END_QA.md](EN
 | --- | --- | --- |
 | 0 Baseline audit, backup/restore, staging | **Audit done; backup unnecessary (no data); no staging** | Live audit 22 Oct 2026 below. Docker unavailable (no sudo) |
 | 1 Schema, RLS, SQL functions | **Live; new handoff table live** | `npm run test:db`: 52/52; migrations 001-005 applied remotely |
-| 2 Routes ported with own/wrong-user tests | **Local passed; handoff update awaiting deploy** | `npm run test:functions`: 14 tests, 42 steps. Real checkout still unverified |
+| 2 Routes ported with own/wrong-user tests | **Local passed; handoff update awaiting deploy** | `npm run test:functions`: 14 tests, 43 steps. Real checkout still unverified |
 | 3 Mobile + admin without Fastify | **Built; device proof pending** | mobile/admin typecheck pass, admin hosted; Android preview APK build finished for earlier commit. No device or email round trip |
 | 4 Cron/sync/push | **Original worker live; linked-job update awaiting deploy** | Local replay/partial-failure/lease/cursor tests pass; push not proven on device |
 | 5/6 Release, rollback drill | **Open** | Android real-device QA, checkout/payment proof, push credentials, store submissions and rollback drill remain |
@@ -41,13 +41,14 @@ This is the historical 22 October smoke test. Since then, an owner admin was cre
 
 **Phase 5, 23 October** — Added `booking_handoffs` with default-deny RLS, `POST /bookings/handoff` and `GET /bookings/handoff/:id`, mobile checkout/check UI, duplicate-customer job ownership mapping, linked payment history, and linked job polling for points/status. Local tests and typechecks pass. Migration 005 was applied to the active project. Deploying the changed functions failed with Supabase HTTP 403 because the CLI login cannot access this project; until deployment, the live API returns 404 for the new handoff routes. No real booking or payment was made.
 `GET /bookings/handoff/latest` and a "Check recent booking" action were added so a customer can resume an unexpired handoff after leaving the booking screen or restarting the app; this is locally tested only.
+Confirmation push now waits for Urable's `paymentStatus = paid`; an unpaid matched job is displayed as payment pending. The public Urable OpenAPI lists `pending`, `unpaid` and `paid` payment states. This prevents a scheduled job created before checkout payment from being announced as a paid booking.
 The updated booking browser interaction passed with mocked network responses (`node scripts/qa-booking-web.mjs` while Expo web runs on port 8082); it is not proof of a native WebView or real payment.
 
 ## Verified commands (this machine)
 
 ```
 npm run test:db          52 passed
-npm run test:functions   14 passed (42 steps)
+npm run test:functions   14 passed (43 steps)
 npm run check:functions  deno check OK
 npm run typecheck        api, mobile, admin OK
 npm run build            api, admin OK

@@ -17,7 +17,10 @@ export async function recordJob(deps: Deps, userId: string, job: UrableJob): Pro
   const r = row.r as { skipped?: boolean; isNew?: boolean; oldStatus?: string };
   if (r.skipped) return;
   const link = { deepLink: `/bookings/${job.id}` };
-  if (r.isNew && job.status.toLowerCase() === 'scheduled') {
+  // A virtual-shop job can exist before checkout is paid. The same event key
+  // lets a later paid sync send confirmation once without announcing an
+  // abandoned unpaid checkout as confirmed.
+  if (job.status.toLowerCase() === 'scheduled' && job.paymentStatus === 'paid') {
     await sendPushToUser(deps, userId, `confirmed:${job.id}`, { title: 'Booking confirmed', body: 'Your SoFlo Suds appointment is on the schedule.', data: link }, 'service');
   } else if (!r.isNew && r.oldStatus !== job.status) {
     await sendPushToUser(deps, userId, `status:${job.id}:${job.status}`, { title: 'Service update', body: `Your SoFlo Suds booking is ${job.status}.`, data: link }, 'service');

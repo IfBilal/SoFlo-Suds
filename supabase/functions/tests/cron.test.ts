@@ -29,20 +29,26 @@ describe('scheduler authentication', () => {
 });
 
 describe('sync', () => {
-  test('first run credits once at the configured rate and notifies once', async () => {
+  test('first run credits paid completion without confirming an unpaid booking', async () => {
     const res = await cron({ 'x-cron-secret': SECRET });
     const body = await res.json();
     assert.equal(res.status, 200); assert.ok(body.sync.users >= 2);
     assert.equal(await bal(A), 200);            // $100.00 paid x 2 points/USD
     assert.equal(await bal(B), 0);              // scheduled, unpaid
     const confirmed = t.pushed.flat().filter((m) => m.title === 'Booking confirmed');
-    assert.equal(confirmed.length, 1);          // B's scheduled job; A's job was already completed
+    assert.equal(confirmed.length, 0);          // B's scheduled job has not been paid
   });
   test('replays are idempotent: no duplicate credits or pushes', async () => {
     const pushes = t.pushed.length;
     for (let i = 0; i < 3; i++) await syncJobsBatch(t.deps);
     assert.equal(await bal(A), 200); assert.equal(t.pushed.length, pushes);
     assert.equal((await t.sql`SELECT count(*)::int c FROM points_ledger WHERE reason = 'job_completed'`)[0].c, 1);
+  });
+  test('a scheduled job receives confirmation once when Urable later reports paid', async () => {
+    t.urable.jobs.find((j) => j.id === 'jobB')!.paymentStatus = 'paid';
+    await syncJobsBatch(t.deps); await syncJobsBatch(t.deps);
+    assert.equal(t.pushed.flat().filter((m) => m.title === 'Booking confirmed').length, 1);
+    assert.equal(await bal(B), 0); // payment alone does not earn completion points
   });
   test('a status change notifies exactly once', async () => {
     t.urable.jobs.find((j) => j.id === 'jobB')!.status = 'in progress';

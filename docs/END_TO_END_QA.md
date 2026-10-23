@@ -7,9 +7,9 @@ Last updated: 23 October 2026. Handbook Section 9 is the release criterion. A pa
 | Area | Evidence | Release state |
 | --- | --- | --- |
 | Supabase schema and RLS | `npm run test:db` passes 52 checks; migrations 001-005 are applied to the live project | Local semantics passed; hosted security smoke covered migrations 001-004 only |
-| Edge Function contracts | `npm run test:functions` passes 14 tests and 42 nested steps, including duplicate Urable customer handoff, wrong-user access, payments and linked-job sync | New functions await deployment; real checkout untested |
+| Edge Function contracts | `npm run test:functions` passes 14 tests and 43 nested steps, including duplicate Urable customer handoff, wrong-user access, payments and linked-job sync | New functions await deployment; real checkout untested |
 | Compilation | `npm run typecheck`, `npm run check:functions`, `npm run build`, Android JS export | Passed locally; no device runtime proof |
-| Booking browser interaction | With `CI=1 npx expo start --web --port 8082`, `node scripts/qa-booking-web.mjs` passed start handoff → checkout → pending → matched and resumed a recent attempt after reload, using mocked Supabase/Urable responses | Browser interaction passed; native WebView and real backend still unverified |
+| Booking browser interaction | With `CI=1 npx expo start --web --port 8082`, `node scripts/qa-booking-web.mjs` passed start handoff → checkout → pending → matched and resumed a recent attempt after reload, using mocked Supabase/Urable responses. [Matched screen](visual-validation/390/booking-handoff-matched.png) was checked against the existing dark card/type system | Browser interaction passed; native WebView and real backend still unverified |
 | Android artifact | Earlier EAS preview APK finished, built from commit `017b2bf` | Does not contain migration 005 handoff work; needs a new build after function deployment |
 | Live Supabase | Four original migrations/functions/Cron and admin site deployed; migration 005 table applied | Supabase CLI deploy receives HTTP 403 for current login; old functions remain live |
 | Urable | Marked test customer/vehicle/job creation, read, cancel; no payment made | Paid virtual-shop checkout and return-to-account link unverified |

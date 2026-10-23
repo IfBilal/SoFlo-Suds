@@ -48,9 +48,9 @@ export default function BookingScreen() {
   if (stage === 'verify') return <Screen title="Check your booking." subtitle="We’ll show your appointment when Urable confirms it.">
     <Card>
       {handoff.data?.state === 'matched' && handoff.data.booking ? <>
-        <BrandText style={styles.heading}>Booking found</BrandText>
+        <BrandText style={styles.heading}>Appointment found</BrandText>
         <BrandText>{handoff.data.booking.serviceName}</BrandText>
-        <BrandText muted>Payment: {handoff.data.booking.paymentStatus ?? 'Checking with SoFlo Suds'}</BrandText>
+        <BrandText muted>{handoff.data.booking.paymentStatus === 'paid' ? 'Payment confirmed by Urable' : 'Payment pending in Urable'}</BrandText>
         <Button label="View booking" onPress={() => router.replace({ pathname: '/booking-detail' as never, params: { id: handoff.data!.booking!.id } })} style={{ marginTop: 18 }} />
       </> : <>
         <BrandText muted>{handoff.data?.state === 'expired' ? 'This booking check expired. If you completed checkout, contact the shop with your Urable booking number.' : handoff.data?.state === 'ambiguous' ? 'We found more than one new appointment. Enter the booking number from Urable’s confirmation to identify yours.' : 'If you completed checkout, we’re checking Urable for your appointment. Do not submit another booking while this check is pending.'}</BrandText>

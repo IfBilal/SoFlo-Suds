@@ -34,6 +34,7 @@ test('handoff begins with a server-owned snapshot and links a duplicate-customer
   assert.equal(linked.json.booking.id, 'jobDup');
   assert.equal(linked.json.booking.vehicleName, '2020 Honda Civic');
   assert.equal(linked.json.booking.paymentStatus, 'unpaid');
+  assert.equal(t.pushed.flat().filter((m) => m.title === 'Booking confirmed').length, 0);
   assert.equal((await t.call('GET', path, { token: 'tokA' })).json.booking.id, 'jobDup');
   assert.equal((await t.call('GET', '/bookings/handoff/latest', { token: 'tokA' })).json, null);
   assert.equal((await t.sql`SELECT count(*)::int n FROM job_sync WHERE urable_job_id = 'jobDup'`)[0].n, 1);

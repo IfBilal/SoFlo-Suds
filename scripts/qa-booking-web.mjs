@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 
 const { env } = JSON.parse(readFileSync('apps/mobile/eas.json', 'utf8')).build.preview;
@@ -52,12 +52,14 @@ try {
   await page.getByText('Close', { exact: true }).click();
   await page.getByText('checking Urable for your appointment').waitFor();
   await page.getByText('Check again').click();
-  await page.getByText('Booking found').waitFor();
-  await page.getByText('Payment: unpaid').waitFor();
+  await page.getByText('Appointment found').waitFor();
+  await page.getByText('Payment pending in Urable').waitFor();
+  mkdirSync('docs/visual-validation/390', { recursive: true });
+  await page.screenshot({ path: 'docs/visual-validation/390/booking-handoff-matched.png' });
   showRecent = true;
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.getByText('Check recent booking').click();
-  await page.getByText('Booking found').waitFor();
+  await page.getByText('Appointment found').waitFor();
   assert.deepEqual(errors, []);
   console.log('Booking web QA passed: start → checkout → pending → matched; recent handoff resumes after reload.');
 } finally {
