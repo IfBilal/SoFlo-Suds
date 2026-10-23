@@ -107,6 +107,35 @@ describe('record_job', () => {
   });
 });
 
+describe('referral abuse defences (handbook 4.6)', () => {
+  const mk = async (tag: string, phone: string | null) => (await q<{ id: string }>(
+    `INSERT INTO users (urable_customer_id,name,email,phone,referral_code,password_hash) VALUES ('u'||$1,'R '||$1,$1||'@r.test',$2,upper(left(md5($1),6)),'h') RETURNING id`, [tag, phone]))[0].id;
+  const refer = (referee: string) => q(`INSERT INTO referrals (referrer_id, referee_id) VALUES ($1,$2)`, [A, referee]);
+  const status = async (referee: string) => (await q<{ status: string; reject_reason: string | null }>(`SELECT status, reject_reason FROM referrals WHERE referee_id=$1`, [referee]))[0];
+  const rec = (u: string, job: string) => q(`SELECT soflo_private.record_job($1,$2,'v1','completed','paid',now(),10000)`, [u, job]);
+  test('a referee sharing the referrer\'s phone is rejected and nobody is paid the bonus', async () => {
+    const [{ phone }] = await q<{ phone: string }>(`SELECT phone FROM users WHERE id=$1`, [A]);
+    const dup = await mk('dupphone', phone); await refer(dup);
+    const a0 = await bal(A), d0 = await bal(dup);
+    await rec(dup, 'jd1');
+    assert.deepEqual(await status(dup), { status: 'rejected', reject_reason: 'duplicate_phone' });
+    assert.equal(await bal(A), a0); assert.equal(await bal(dup), d0 + 100);
+  });
+  test('a referrer past the monthly cap earns no more rewards', async () => {
+    await q(`INSERT INTO settings (key,value) VALUES ('referral_monthly_cap','1') ON CONFLICT (key) DO UPDATE SET value='1'`);
+    const over = await mk('overcap', '+19995550001'); await refer(over);
+    const a0 = await bal(A); await rec(over, 'jc1');
+    assert.deepEqual(await status(over), { status: 'rejected', reject_reason: 'monthly_cap' });
+    assert.equal(await bal(A), a0);
+    await q(`DELETE FROM settings WHERE key='referral_monthly_cap'`);
+  });
+  test('without the setting the cap defaults to 20 and a normal referral is rewarded', async () => {
+    const ok = await mk('okref', '+19995550002'); await refer(ok);
+    const a0 = await bal(A); await rec(ok, 'jo1');
+    assert.equal((await status(ok)).status, 'rewarded'); assert.equal(await bal(A), a0 + 50);
+  });
+});
+
 describe('delete_account and lease', () => {
   test('anonymizes, drops push tokens, returns auth id, and is not repeatable', async () => {
     const [{ x }] = await q<{ x: string }>(`SELECT soflo_private.delete_account($1) x`, [A]);
