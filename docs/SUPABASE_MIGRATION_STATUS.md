@@ -119,3 +119,7 @@ Signup confirmation previously redirected to `soflosuds://reset`, which opens th
 - Tests: 19 function tests (54 steps), 7 app-logic tests, 55 database tests.
 - "Add to calendar" (web calendar link, no extra permission) on the matched booking and booking detail screens; unit-tested.
 - Still not built from the handbook: same-device / same-payment-name referral checks.
+- **Cancellation rule** (handbook open-question default): free cancel up to `cancel_window_hours` (default 24) before the visit, then `CANCEL_NOT_ALLOWED` with "call the shop at <phone>". Setting editable in admin; tested.
+- **Contact screen fixed**: it called a `/config` route that no longer exists on the Supabase API; it now reads `shop_config`.
+- **Welcome screen** now has the handbook's 2–3 slides (certified team, protection, rewards).
+- Admin site redeployed with the new settings fields.

@@ -22,6 +22,18 @@ after(async () => { await t.stop(); });
 const apply = (token: string, job: string, code: string) => t.call('POST', `/bookings/${job}/promo`, { token, body: { code } });
 const uses = (job: string) => t.sql`SELECT status FROM promo_uses WHERE urable_job_id = ${job} ORDER BY created_at`;
 
+describe('cancellation window', () => {
+  test('inside 24 h the app says call the shop; outside it cancels', async () => {
+    t.urable.jobs.push({ id: 'soonJob', customerRef: 'uA', itemRefs: ['vA'], status: 'scheduled', paymentStatus: 'unpaid', start: Date.now() + 6 * 3_600_000, invoice: { subtotal: 1000, items: {} } });
+    const blocked = await t.call('POST', '/bookings/soonJob/cancel', { token: 'tokA' });
+    assert.equal(blocked.status, 409); assert.equal(blocked.json.error.code, 'CANCEL_NOT_ALLOWED'); assert.match(blocked.json.error.message, /call the shop at 555/i);
+    assert.ok(!t.urable.calls.includes('cancelJob:soonJob'));
+    await t.sql`INSERT INTO settings (key, value) VALUES ('cancel_window_hours', '2') ON CONFLICT (key) DO UPDATE SET value = '2'`;
+    assert.equal((await t.call('POST', '/bookings/soonJob/cancel', { token: 'tokA' })).status, 200);
+    await t.sql`DELETE FROM settings WHERE key = 'cancel_window_hours'`;
+  });
+});
+
 describe('discount math', () => {
   test('percent rounds to cents, fixed is dollars, both capped at the subtotal', () => {
     assert.equal(discountFor('percent', 10, 17499), 1750);

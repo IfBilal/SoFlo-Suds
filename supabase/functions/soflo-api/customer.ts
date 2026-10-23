@@ -168,6 +168,13 @@ export function customerRoutes(app: Router) {
     const user = await requireCustomer(c.req, c.deps); const { id } = idParam.parse(c.params);
     const job = await ownedJob(c, user, id);
     if (isDoneStatus(job.status)) throw new HttpError(409, 'CANCEL_NOT_ALLOWED', 'This booking cannot be cancelled in the app.');
+    // Handbook open question: free cancel up to 24 h before, then "Call the shop" (window is a setting).
+    const [cfg] = await c.deps.sql`SELECT
+      COALESCE((SELECT (value #>> '{}')::numeric FROM settings WHERE key = 'cancel_window_hours'), 24) AS hours,
+      (SELECT value #>> '{}' FROM settings WHERE key = 'shop_phone') AS phone`;
+    if (job.start && job.start - Date.now() < Number(cfg.hours) * 3_600_000) {
+      throw new HttpError(409, 'CANCEL_NOT_ALLOWED', `Bookings can be cancelled in the app up to ${Number(cfg.hours)} hours before the visit. Please call the shop${cfg.phone ? ` at ${cfg.phone}` : ''}.`);
+    }
     await c.deps.urable().cancelJob(id);
     await releasePromo(c.deps.sql, id);
     return { ok: true };
