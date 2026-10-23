@@ -59,6 +59,7 @@ export function authError(error: { code?: string; status?: number } | null | und
 }
 
 export const AUTH_REDIRECT = 'soflosuds://reset';
+export const CONFIRM_REDIRECT = 'soflosuds://confirm';
 
 export const endpoints = {
   me: () => api<SessionUser>('/me'),
@@ -75,7 +76,7 @@ export const endpoints = {
   },
   /** Creates the Auth identity. Resolves to true when a session exists (profile can be completed now). */
   signup: async (input: { name: string; email: string; phone: string; password: string; referralCode?: string }): Promise<boolean> => {
-    const { data, error } = await supabase.auth.signUp({ email: input.email.toLowerCase(), password: input.password, options: { emailRedirectTo: AUTH_REDIRECT, data: { name: input.name, phone: input.phone, ...(input.referralCode ? { referralCode: input.referralCode } : {}) } } });
+    const { data, error } = await supabase.auth.signUp({ email: input.email.toLowerCase(), password: input.password, options: { emailRedirectTo: CONFIRM_REDIRECT, data: { name: input.name, phone: input.phone, ...(input.referralCode ? { referralCode: input.referralCode } : {}) } } });
     if (error) throw authError(error, 'Could not create your account. Please try again.');
     // With email confirmation on, an existing address returns an obfuscated user with no identities.
     if (data.user && data.user.identities?.length === 0) throw new ApiError(409, 'EMAIL_TAKEN', 'This email already has an account.');
@@ -88,6 +89,11 @@ export const endpoints = {
     return { ok: true };
   },
   /** Exchange the one-time code from the emailed link, then set the new password. */
+  /** Trade the one-time code from the confirmation email for a session. Only works on the phone that started signup (PKCE). */
+  confirmEmail: async (code: string) => {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) throw new ApiError(400, 'CONFIRM_FAILED', 'This confirmation link has expired or was opened on a different device. Log in, or sign up again.');
+  },
   reset: async (code: string, password: string) => {
     if (code) { const { error } = await supabase.auth.exchangeCodeForSession(code); if (error) throw new ApiError(400, 'RESET_EXPIRED', 'This reset link has expired. Request a new one.'); }
     const { error } = await supabase.auth.updateUser({ password });

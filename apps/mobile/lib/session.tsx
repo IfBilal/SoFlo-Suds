@@ -9,6 +9,8 @@ interface SessionContextValue {
   /** 'verify-email' when the project requires confirmation and no session exists yet. */
   signUp: (input: SignUpInput) => Promise<'signed-in' | 'verify-email'>;
   signOut: () => Promise<void>;
+  /** Pick up a session that was just created outside signIn (e.g. email confirmation) and finish the profile. */
+  adoptSession: () => Promise<void>;
 }
 const SessionContext = createContext<SessionContextValue | null>(null);
 
@@ -53,6 +55,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setUser(await endpoints.completeProfile());
       return 'signed-in';
     },
+    adoptSession: async () => setUser(await loadProfile()),
     signOut: async () => { try { await endpoints.logout(); } finally { await clearSession(); setUser(null); } },
   }}>{children}</SessionContext.Provider>;
 }
