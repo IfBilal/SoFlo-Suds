@@ -1,0 +1,30 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://tocofoxugjkaytxuxyzb.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_I3MIi_zrOdiNcvSxQY-KjQ_BHrJ8hBM",
+        "EXPO_PUBLIC_URABLE_SHOP_URL": "https://app.urable.com/virtual-shop/v2utxe9P5ebXGz1m9fXr"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://tocofoxugjkaytxuxyzb.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_I3MIi_zrOdiNcvSxQY-KjQ_BHrJ8hBM",
+        "EXPO_PUBLIC_URABLE_SHOP_URL": "https://app.urable.com/virtual-shop/v2utxe9P5ebXGz1m9fXr"
+      }
+    }
+  }
+}
