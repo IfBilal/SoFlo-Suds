@@ -76,3 +76,8 @@ mobile: npx expo-doctor  19/21; the 2 failures are Expo API lookups that timed o
 - `ADMIN_ORIGINS` secret = the Vercel URL plus `http://localhost:5173`; the URL is also in the Auth redirect allow-list. CORS preflight from that origin verified.
 - Owner admin account created (the project owner's own account for now); the client's admin is added later with `scripts/supabase/bootstrap-admin.mjs`, then the owner row is set `active = false`.
 - Admin sign-in verified against the live project through the API (`GET /admin/me` returns 200); browser sign-in on the hosted site is still to be clicked through.
+
+## Functions deployed from branch HEAD (2026-10-23)
+- `soflo-api` and `cron-worker` redeployed (both now version 3) from `supabase-backend-migration` with `supabase functions deploy --use-api`, using the owner's access token supplied in the shell only. `health` unchanged. Migrations were not rerun.
+- Route check: `GET /bookings/handoff/latest` with no token returns 401 UNAUTHORIZED; with the admin token it returns PROFILE_INCOMPLETE (a customer-only route, so the route exists and runs the customer check); `/admin/me` still 200. This shows the routes are deployed, not that the live Urable handoff matches real checkouts; that still needs a real-device test.
+- Cron after deploy: see the check below.
