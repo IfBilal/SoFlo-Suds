@@ -1,5 +1,7 @@
 # Handoff: SoFlo Suds Supabase backend migration
 
+> Historical handoff from before the booking-handoff implementation. For the current branch state and next steps, read [CLAUDE_CONTINUATION_HANDOFF.md](CLAUDE_CONTINUATION_HANDOFF.md).
+
 Branch: `supabase-backend-migration` (`main` untouched at `1beb548`). Repo: `IfBilal/SoFlo-Suds`.
 Read first: `docs/SUPABASE_BACKEND_MIGRATION_HANDOFF.md` (the original task), then `docs/SUPABASE_MIGRATION_STATUS.md` (gate table, live audit, smoke results, known gaps), `docs/SUPABASE_SETUP.md`, `docs/SUPABASE_CUTOVER_RUNBOOK.md`, `docs/adr/0001-supabase-backend.md`.
 
