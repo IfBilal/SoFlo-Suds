@@ -62,4 +62,4 @@ Default-deny on all tables. Direct client reads exist only for: own `users` colu
 
 ## 6. Storage
 
-Public `gallery` bucket (JPEG/PNG/WebP, 10 MB). Clients have no write policy; admin uploads go through `POST /admin/uploads/gallery`, which checks the file's magic bytes and generates the object key. Warranty documents (a private bucket with signed URLs) are still not implemented.
+Public `gallery` bucket (JPEG/PNG/WebP, 10 MB). Clients have no write policy; admin uploads go through `POST /admin/uploads/gallery`, which checks the file's magic bytes and generates the object key. The handbook requires admin-entered warranty details, not warranty document uploads.

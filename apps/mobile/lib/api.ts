@@ -98,6 +98,7 @@ export const endpoints = {
   services: () => api<Service[]>('/services'),
   bookings: () => api<Booking[]>('/bookings'),
   startBookingHandoff: () => api<{ attemptId: string; expiresAt: string }>('/bookings/handoff', { method: 'POST' }),
+  latestBookingHandoff: () => api<{ attemptId: string; expiresAt: string } | null>('/bookings/handoff/latest'),
   checkBookingHandoff: (attemptId: string, confirmationNumber?: number) => api<BookingHandoff>(`/bookings/handoff/${encodeURIComponent(attemptId)}${confirmationNumber ? `?confirmationNumber=${confirmationNumber}` : ''}`),
   vehicles: () => api<Vehicle[]>('/vehicles'),
   rewards: () => api<RewardSummary>('/rewards'),

@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BrandText, Button, Card, Screen, StateCard } from '@/components/BrandUI';
 import { UrableBookingWebView } from '@/components/UrableBookingWebView';
 import { endpoints } from '@/lib/api';
 import { palette as c } from '@/theme';
 
 export default function BookingScreen() {
+  const queryClient = useQueryClient();
   const { serviceId, vehicleId: requestedVehicleId } = useLocalSearchParams<{ serviceId?: string; vehicleId?: string }>();
   const [location, setLocation] = useState<'shop' | 'field'>('shop');
   const [stage, setStage] = useState<'choose' | 'checkout' | 'verify'>('choose');
@@ -18,17 +19,22 @@ export default function BookingScreen() {
   const [confirmationNumber, setConfirmationNumber] = useState('');
   const services = useQuery({ queryKey: ['services'], queryFn: endpoints.services });
   const vehicles = useQuery({ queryKey: ['vehicles'], queryFn: endpoints.vehicles });
+  const recent = useQuery({ queryKey: ['booking-handoff-latest'], queryFn: endpoints.latestBookingHandoff });
   const handoff = useQuery({
     queryKey: ['booking-handoff', attemptId, confirmationNumber],
     queryFn: () => endpoints.checkBookingHandoff(attemptId!, confirmationNumber ? Number(confirmationNumber) : undefined),
     enabled: stage === 'verify' && !!attemptId && (!confirmationNumber || /^[1-9]\d*$/.test(confirmationNumber)),
     refetchInterval: (query) => query.state.data?.state === 'pending' ? 5000 : false,
   });
+  useEffect(() => {
+    if (handoff.data?.state === 'matched' || handoff.data?.state === 'expired') queryClient.setQueryData(['booking-handoff-latest'], null);
+  }, [handoff.data?.state, queryClient]);
   async function beginCheckout() {
     if (starting) return;
     setStarting(true);
     try {
       const attempt = await endpoints.startBookingHandoff();
+      queryClient.setQueryData(['booking-handoff-latest'], attempt);
       setAttemptId(attempt.attemptId);
       setConfirmationNumber('');
       setStage('checkout');
@@ -62,6 +68,11 @@ export default function BookingScreen() {
     {services.isPending || vehicles.isPending ? <Card><BrandText muted>Loading booking choices…</BrandText></Card>
       : services.isError || vehicles.isError ? <StateCard title="Booking is unavailable" body="Please try again." action="Try again" onAction={() => { services.refetch(); vehicles.refetch(); }} />
       : <Card>
+        {recent.data && <Card accent="cyan" style={{ marginBottom: 20 }}>
+          <BrandText style={{ fontWeight: '600' }}>Already booked?</BrandText>
+          <BrandText muted style={{ marginTop: 6 }}>Check a recent Urable checkout before starting another booking.</BrandText>
+          <Button label="Check recent booking" onPress={() => { const id = recent.data?.attemptId; if (id) { setAttemptId(id); setStage('verify'); } }} style={{ marginTop: 14 }} />
+        </Card>}
         <BrandText style={styles.heading}>Your vehicle & service</BrandText>
         <BrandText style={styles.fieldLabel}>Choose your vehicle</BrandText>
         {selectedVehicle ? <Pressable accessibilityRole="button" accessibilityLabel="Choose vehicle" onPress={() => setVehiclesOpen(!vehiclesOpen)} style={styles.selection}><BrandText style={styles.selectionText}>{selectedVehicle.name}</BrandText><BrandText style={{ color: c.cyan }}>⌄</BrandText></Pressable> : <BrandText muted style={styles.emptyVehicle}>Add a vehicle to keep this booking connected to your garage.</BrandText>}

@@ -6,7 +6,7 @@ let t: Awaited<ReturnType<typeof setup>>;
 before(async () => { t = await setup(); });
 after(async () => { await t.stop(); });
 
-const customerGets = ['/me', '/me/points', '/me/referral', '/services', '/services/s1', '/vehicles', '/bookings', '/bookings/jobA', '/payments', '/rewards', '/protection', '/shop/products', '/gallery', '/reviews'];
+const customerGets = ['/me', '/me/points', '/me/referral', '/services', '/services/s1', '/vehicles', '/bookings', '/bookings/handoff/latest', '/bookings/jobA', '/payments', '/rewards', '/protection', '/shop/products', '/gallery', '/reviews'];
 
 describe('authentication boundary', () => {
   test('every customer route rejects missing and unknown tokens', async () => {

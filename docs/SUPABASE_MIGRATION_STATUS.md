@@ -40,6 +40,7 @@ This is the historical 22 October smoke test. Since then, an owner admin was cre
 **Phase 4** — `cron-worker` (secret-authenticated; sync batch with lease+cursor, reminders, Expo receipts), `supabase/cron/schedule.sql` (manual, per environment).
 
 **Phase 5, 23 October** — Added `booking_handoffs` with default-deny RLS, `POST /bookings/handoff` and `GET /bookings/handoff/:id`, mobile checkout/check UI, duplicate-customer job ownership mapping, linked payment history, and linked job polling for points/status. Local tests and typechecks pass. Migration 005 was applied to the active project. Deploying the changed functions failed with Supabase HTTP 403 because the CLI login cannot access this project; until deployment, the live API returns 404 for the new handoff routes. No real booking or payment was made.
+`GET /bookings/handoff/latest` and a "Check recent booking" action were added so a customer can resume an unexpired handoff after leaving the booking screen or restarting the app; this is locally tested only.
 The updated booking browser interaction passed with mocked network responses (`node scripts/qa-booking-web.mjs` while Expo web runs on port 8082); it is not proof of a native WebView or real payment.
 
 ## Verified commands (this machine)
@@ -66,7 +67,7 @@ mobile: npx expo-doctor  19/21; the 2 failures are Expo API lookups that timed o
 8. **Push** — EAS project exists; FCM/APNs credentials and a development build are still needed. Expo Go cannot test remote push.
 9. **Account deletion** removes the Auth identity and anonymizes at once; already-issued access tokens stop working immediately because `soflo-api` re-checks the profile every call (tested). Tokens used directly against Supabase REST until expiry see nothing (RLS requires an undeleted profile).
 10. **Visual regression** — existing browser comparison is recorded in `docs/visual-validation/`; the new booking handoff screen and all native interactions need device review.
-11. **Warranty documents** — private bucket + signed URLs still unbuilt.
+11. **Protection records** — the handbook requires per-vehicle completed protection jobs plus admin-entered warranty product, coverage and dates; the app and admin implement this. A private warranty-document bucket is not required by handbook Section 4.8 and is out of scope.
 12. `apps/api`, its docs and Fastify scripts remain until Ali approves; remove at cutover only.
 
 ## Admin site (deployed 2026-10-23)

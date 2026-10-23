@@ -32,6 +32,12 @@ function booking(job: UrableJob, vehicles: UrableVehicle[]) {
     scheduledAt: job.start ? new Date(job.start).toISOString() : '', status: job.status, paymentStatus: job.paymentStatus, location: job.type === 'field' ? 'Mobile service' : 'In-shop service',
   };
 }
+async function bookingVehicles(urable: ReturnType<import('../_shared/deps.ts').Deps['urable']>, job: UrableJob, originalCustomerId: string): Promise<UrableVehicle[]> {
+  const vehicles = await urable.listVehicles(originalCustomerId);
+  if (ownsJob(job, originalCustomerId) || !job.customerRef) return vehicles;
+  const duplicateId = job.customerRef.split('/').at(-1)!;
+  return [...vehicles, ...await urable.listVehicles(duplicateId)];
+}
 /** Urable job -> only if it belongs to this customer; otherwise indistinguishable from "missing". */
 async function ownedJob(c: { deps: import('../_shared/deps.ts').Deps }, user: Customer, id: string): Promise<UrableJob> {
   const job = await c.deps.urable().getJob(id).catch((e) => { if ((e as { status?: number }).status === 404) return null; throw e; });
@@ -96,6 +102,13 @@ export function customerRoutes(app: Router) {
       VALUES (${user.id}, ${[...existing]}) RETURNING id, expires_at AS "expiresAt"`;
     return reply({ attemptId: attempt.id, expiresAt: attempt.expiresAt }, 201);
   });
+  app.get('/bookings/handoff/latest', async ({ req, deps }) => {
+    const user = await requireCustomer(req, deps);
+    const [attempt] = await deps.sql`SELECT id, expires_at AS "expiresAt" FROM booking_handoffs
+      WHERE user_id = ${user.id} AND matched_job_id IS NULL AND expires_at > now()
+      ORDER BY created_at DESC LIMIT 1`;
+    return attempt ? { attemptId: attempt.id, expiresAt: attempt.expiresAt } : null;
+  });
   app.get('/bookings/handoff/:id', async ({ req, deps, params, url }) => {
     const user = await requireCustomer(req, deps);
     const identity = await identify(req, deps);
@@ -108,7 +121,7 @@ export function customerRoutes(app: Router) {
     if (!attempt) throw notFound('Booking check');
     if (attempt.matchedJobId) {
       const job = await ownedJob({ deps }, user, attempt.matchedJobId as string);
-      return { state: 'matched', booking: booking(job, await deps.urable().listVehicles(user.urableCustomerId)) };
+      return { state: 'matched', booking: booking(job, await bookingVehicles(deps.urable(), job, user.urableCustomerId)) };
     }
     if (new Date(attempt.expiresAt as string).getTime() < Date.now()) return { state: 'expired' };
     const number = url.searchParams.get('confirmationNumber');
@@ -127,7 +140,7 @@ export function customerRoutes(app: Router) {
     const [link] = await deps.sql`SELECT 1 FROM job_sync WHERE user_id = ${user.id} AND urable_job_id = ${job.id}`;
     if (!link) return { state: 'ambiguous' };
     await deps.sql`UPDATE booking_handoffs SET matched_job_id = ${job.id} WHERE id = ${id} AND user_id = ${user.id} AND matched_job_id IS NULL`;
-    return { state: 'matched', booking: booking(job, await deps.urable().listVehicles(user.urableCustomerId)) };
+    return { state: 'matched', booking: booking(job, await bookingVehicles(deps.urable(), job, user.urableCustomerId)) };
   });
   app.get('/bookings', async ({ req, deps }) => {
     const user = await requireCustomer(req, deps); const urable = deps.urable();
@@ -144,12 +157,14 @@ export function customerRoutes(app: Router) {
         if (job) { owned.push(job); seen.add(id); }
       }
     }
+    const duplicateIds = new Set(owned.filter((j) => !ownsJob(j, user.urableCustomerId) && j.customerRef).map((j) => j.customerRef!.split('/').at(-1)!));
+    for (const id of duplicateIds) vehicles.push(...await urable.listVehicles(id));
     return owned.map((j) => booking(j, vehicles));
   });
   app.get('/bookings/:id', async (c) => {
     const user = await requireCustomer(c.req, c.deps); const { id } = idParam.parse(c.params);
-    const [job, vehicles] = await Promise.all([ownedJob(c, user, id), c.deps.urable().listVehicles(user.urableCustomerId)]);
-    return booking(job, vehicles);
+    const job = await ownedJob(c, user, id);
+    return booking(job, await bookingVehicles(c.deps.urable(), job, user.urableCustomerId));
   });
   app.post('/bookings/:id/cancel', async (c) => {
     const user = await requireCustomer(c.req, c.deps); const { id } = idParam.parse(c.params);

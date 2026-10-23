@@ -17,6 +17,8 @@ after(async () => { await t.stop(); });
 test('handoff begins with a server-owned snapshot and links a duplicate-customer job once', async () => {
   const started = await t.call('POST', '/bookings/handoff', { token: 'tokA' });
   assert.equal(started.status, 201);
+  assert.equal((await t.call('GET', '/bookings/handoff/latest', { token: 'tokA' })).json.attemptId, started.json.attemptId);
+  assert.equal((await t.call('GET', '/bookings/handoff/latest', { token: 'tokB' })).json, null);
   const path = `/bookings/handoff/${started.json.attemptId}`;
   assert.equal((await t.call('GET', path, { token: 'tokA' })).json.state, 'pending');
   assert.equal((await t.call('GET', path, { token: 'tokB' })).status, 404);
@@ -30,8 +32,10 @@ test('handoff begins with a server-owned snapshot and links a duplicate-customer
   assert.equal(linked.status, 200);
   assert.equal(linked.json.state, 'matched');
   assert.equal(linked.json.booking.id, 'jobDup');
+  assert.equal(linked.json.booking.vehicleName, '2020 Honda Civic');
   assert.equal(linked.json.booking.paymentStatus, 'unpaid');
   assert.equal((await t.call('GET', path, { token: 'tokA' })).json.booking.id, 'jobDup');
+  assert.equal((await t.call('GET', '/bookings/handoff/latest', { token: 'tokA' })).json, null);
   assert.equal((await t.sql`SELECT count(*)::int n FROM job_sync WHERE urable_job_id = 'jobDup'`)[0].n, 1);
   assert.ok((await t.call('GET', '/bookings', { token: 'tokA' })).json.some((b: { id: string }) => b.id === 'jobDup'));
   assert.equal((await t.call('GET', '/bookings/jobDup', { token: 'tokA' })).status, 200);

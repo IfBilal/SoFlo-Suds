@@ -9,6 +9,7 @@ const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH 
 const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 const errors = [];
 let checks = 0;
+let showRecent = false;
 const session = {
   access_token: 'qa-access-token', refresh_token: 'qa-refresh-token', token_type: 'bearer',
   expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600,
@@ -26,6 +27,7 @@ await context.route('**/functions/v1/soflo-api/**', async (route) => {
   if (path === '/me') body = { id: 'qa-user', name: 'QA Customer', email: 'qa@example.test', points: 0 };
   else if (path === '/services') body = [{ id: 's1', name: 'Interior Detailing', category: 'Detailing', priceCents: 17500 }];
   else if (path === '/vehicles') body = [{ id: 'v1', name: '2024 Porsche 911', year: 2024, make: 'Porsche', model: '911' }];
+  else if (path === '/bookings/handoff/latest') body = showRecent ? { attemptId: '11111111-1111-4111-8111-111111111111', expiresAt: new Date(Date.now() + 3600000).toISOString() } : null;
   else if (path === '/bookings/handoff' && request.method() === 'POST') body = { attemptId: '11111111-1111-4111-8111-111111111111', expiresAt: new Date(Date.now() + 3600000).toISOString() };
   else if (path.startsWith('/bookings/handoff/')) body = ++checks === 1 ? { state: 'pending' } : {
     state: 'matched', booking: { id: 'job-qa', serviceName: 'Interior Detailing', vehicleName: '2024 Porsche 911', status: 'scheduled', paymentStatus: 'unpaid', scheduledAt: new Date(Date.now() + 86400000).toISOString() },
@@ -52,8 +54,12 @@ try {
   await page.getByText('Check again').click();
   await page.getByText('Booking found').waitFor();
   await page.getByText('Payment: unpaid').waitFor();
+  showRecent = true;
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.getByText('Check recent booking').click();
+  await page.getByText('Booking found').waitFor();
   assert.deepEqual(errors, []);
-  console.log('Booking web QA passed: start handoff → checkout → pending → matched (unpaid shown honestly).');
+  console.log('Booking web QA passed: start → checkout → pending → matched; recent handoff resumes after reload.');
 } finally {
   await context.close();
   await browser.close();
