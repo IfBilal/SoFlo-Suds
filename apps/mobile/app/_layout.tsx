@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { SessionProvider } from '@/lib/session';
 import { SystemGate } from '@/components/SystemGate';
+import { PushTapHandler } from '@/components/PushTapHandler';
 import { palette } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -15,5 +16,5 @@ export default function RootLayout() {
   const [loaded] = useFonts({ Oxanium: require('../assets/fonts/Oxanium.ttf'), 'Goldman-Bold': require('../assets/fonts/Goldman-Bold.ttf') });
   useEffect(() => { if (loaded) SplashScreen.hideAsync(); }, [loaded]);
   if (!loaded) return null;
-  return <QueryClientProvider client={queryClient}><SessionProvider><StatusBar style="light" /><SystemGate><Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.bg } }} /></SystemGate></SessionProvider></QueryClientProvider>;
+  return <QueryClientProvider client={queryClient}><SessionProvider><StatusBar style="light" /><PushTapHandler /><SystemGate><Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.bg } }} /></SystemGate></SessionProvider></QueryClientProvider>;
 }

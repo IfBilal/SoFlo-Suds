@@ -3,6 +3,9 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Device from 'expo-device';
 import { api } from './api';
 
+/** Remote push needs a real device and a development/production build (not Expo Go or web). */
+export const pushSupported = () => !(Platform.OS === 'web' || !Device.isDevice || Constants.executionEnvironment === ExecutionEnvironment.StoreClient);
+
 export async function enablePushNotifications(): Promise<'enabled' | 'denied' | 'unavailable'> {
   // Expo Go does not include Android remote push support. Loading expo-notifications
   // there can throw before this function runs because its topic module is absent.

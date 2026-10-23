@@ -18,6 +18,9 @@ export async function recordJob(deps: Deps, userId: string, job: UrableJob): Pro
       ${job.start ? new Date(job.start) : null}, ${job.invoice?.amountPaid ?? 0}) AS r`;
   const r = row.r as { skipped?: boolean; isNew?: boolean; oldStatus?: string };
   if (r.skipped) return;
+  if (job.status.toLowerCase() === 'completed') {
+    await deps.sql`UPDATE job_sync SET completed_at = ${job.completedAt ? new Date(job.completedAt) : new Date()} WHERE urable_job_id = ${job.id} AND completed_at IS NULL`;
+  }
   const link = { deepLink: `/bookings/${job.id}` };
   // A virtual-shop job can exist before checkout is paid. The same event key
   // lets a later paid sync send confirmation once without announcing an
@@ -76,17 +79,39 @@ export async function syncJobsBatch(deps: Deps, opts: { budgetMs?: number; batch
   return stats;
 }
 
-/** Day-before reminders (20–28h out). reminder_sent_at is the idempotency marker. */
+/**
+ * Day-before reminders: appointments whose local (shop timezone) date is tomorrow, sent once the shop's
+ * `reminder_hour_local` has arrived (default 9). reminder_sent_at is the idempotency marker.
+ */
 export async function sendRemindersOnce(deps: Deps): Promise<{ sent: number }> {
   const { sql } = deps;
-  const jobs = await sql`SELECT id, user_id, urable_job_id FROM job_sync WHERE reminder_sent_at IS NULL
-    AND lower(last_status) NOT IN ('completed','canceled','cancelled')
-    AND scheduled_at BETWEEN now() + interval '20 hours' AND now() + interval '28 hours'`;
+  const jobs = await sql`WITH cfg AS (
+      SELECT COALESCE((SELECT value #>> '{}' FROM settings WHERE key = 'shop_timezone'), 'America/New_York') AS tz,
+             COALESCE((SELECT (value #>> '{}')::int FROM settings WHERE key = 'reminder_hour_local'), 9) AS hr)
+    SELECT j.id, j.user_id, j.urable_job_id FROM job_sync j, cfg
+    WHERE j.reminder_sent_at IS NULL AND lower(j.last_status) NOT IN ('completed','canceled','cancelled')
+      AND (j.scheduled_at AT TIME ZONE cfg.tz)::date = (now() AT TIME ZONE cfg.tz)::date + 1
+      AND extract(hour FROM now() AT TIME ZONE cfg.tz) >= cfg.hr`;
   let sent = 0;
   for (const job of jobs) {
     const result = await sendPushToUser(deps, job.user_id as string, `reminder:${job.urable_job_id}`,
       { title: 'Your SoFlo Suds visit is tomorrow', body: 'Your vehicle care appointment is coming up. Open the app for details.', data: { deepLink: `/bookings/${job.urable_job_id}` } }, 'service');
     if (result === 'sent') { await sql`UPDATE job_sync SET reminder_sent_at = now() WHERE id = ${job.id} AND reminder_sent_at IS NULL`; sent++; }
+  }
+  return { sent };
+}
+
+/** Ask for a review 2 hours after a job completes (once per job, never if already reviewed). */
+export async function sendReviewPromptsOnce(deps: Deps): Promise<{ sent: number }> {
+  const { sql } = deps;
+  const jobs = await sql`SELECT j.user_id, j.urable_job_id FROM job_sync j
+    WHERE j.completed_at IS NOT NULL AND j.completed_at <= now() - interval '2 hours' AND j.completed_at > now() - interval '3 days'
+      AND NOT EXISTS (SELECT 1 FROM reviews r WHERE r.urable_job_id = j.urable_job_id)`;
+  let sent = 0;
+  for (const job of jobs) {
+    const result = await sendPushToUser(deps, job.user_id as string, `review:${job.urable_job_id}`,
+      { title: 'How was your SoFlo Suds service?', body: 'Tell us how it went. It takes a few seconds.', data: { deepLink: `/review/${job.urable_job_id}` } }, 'service');
+    if (result === 'sent') sent++;
   }
   return { sent };
 }

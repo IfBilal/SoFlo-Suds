@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 import { A, B, setup } from './helpers.ts';
 import { handle } from '../cron-worker/index.ts';
-import { syncJobsBatch, sendRemindersOnce } from '../_shared/sync.ts';
+import { syncJobsBatch, sendRemindersOnce, sendReviewPromptsOnce } from '../_shared/sync.ts';
 import { processReceipts, sendPushToUser } from '../_shared/push.ts';
 
 let t: Awaited<ReturnType<typeof setup>>;
@@ -97,8 +97,28 @@ describe('push + reminders', () => {
   });
   test('reminders go out once for appointments ~24h away', async () => {
     await t.sql`INSERT INTO job_sync (user_id, urable_job_id, urable_vehicle_id, last_status, scheduled_at) VALUES (${A}, 'jobSoon', 'vA', 'scheduled', now() + interval '24 hours')`;
+    await t.sql`INSERT INTO settings (key, value) VALUES ('reminder_hour_local', '0') ON CONFLICT (key) DO UPDATE SET value = '0'`;
     assert.equal((await sendRemindersOnce(t.deps)).sent, 1);
     assert.equal((await sendRemindersOnce(t.deps)).sent, 0);
+  });
+  test('reminders wait for the shop reminder hour and skip same-day or two-day-out visits', async () => {
+    await t.sql`INSERT INTO job_sync (user_id, urable_job_id, urable_vehicle_id, last_status, scheduled_at) VALUES
+      (${A}, 'jobWait', 'vA', 'scheduled', now() + interval '24 hours'), (${A}, 'jobToday', 'vA', 'scheduled', now() + interval '1 hour'), (${A}, 'jobFar', 'vA', 'scheduled', now() + interval '50 hours')`;
+    await t.sql`UPDATE settings SET value = '24' WHERE key = 'reminder_hour_local'`;           // hour never reached
+    assert.equal((await sendRemindersOnce(t.deps)).sent, 0);
+    await t.sql`UPDATE settings SET value = '0' WHERE key = 'reminder_hour_local'`;
+    await t.sql`UPDATE job_sync SET scheduled_at = now() + interval '1 hour' WHERE urable_job_id = 'jobWait'`; // not tomorrow
+    assert.equal((await sendRemindersOnce(t.deps)).sent, 0);
+  });
+  test('a review prompt goes out once, 2 hours after completion, and not if already reviewed', async () => {
+    await t.sql`INSERT INTO job_sync (user_id, urable_job_id, urable_vehicle_id, last_status, completed_at) VALUES
+      (${A}, 'rv1', 'vA', 'completed', now() - interval '3 hours'), (${A}, 'rv2', 'vA', 'completed', now() - interval '30 minutes'), (${A}, 'rv3', 'vA', 'completed', now() - interval '3 hours')`;
+    await t.sql`INSERT INTO reviews (user_id, urable_job_id, rating) VALUES (${A}, 'rv3', 5)`;
+    const before = t.pushed.flat().length;
+    assert.equal((await sendReviewPromptsOnce(t.deps)).sent, 1);
+    assert.equal((await sendReviewPromptsOnce(t.deps)).sent, 0);
+    const msgs = t.pushed.flat().slice(before);
+    assert.equal(msgs.length, 1); assert.equal(msgs[0].data?.deepLink, '/review/rv1');
   });
   test('receipts remove tokens Expo reports as unregistered', async () => {
     await t.sql`DELETE FROM push_tickets`;

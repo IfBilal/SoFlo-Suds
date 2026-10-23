@@ -111,3 +111,10 @@ Signup confirmation previously redirected to `soflosuds://reset`, which opens th
 - Live check in a rolled-back transaction on the production database: a $125.50 completed+paid job credits 125 points once and 0 on replay; referrer +250, referee +375; referral `rewarded`. Nothing persisted.
 - **Not done on purpose:** a real Urable paid job. Recording a cash payment through the API would add a completed, paid job to the shop's real earnings reports and cannot be removed through the API. So Urable's actual `paymentStatus`/`amountPaid` values after a real payment remain unverified, as does the refund status string.
 - Tests: `npm run test:db` 55 passing (3 new referral-defence tests).
+
+## Handbook gaps closed (2026-10-23)
+- **Push taps open the right screen** (`PushTapHandler`, `routeForDeepLink`, whitelist of known routes; foreground display on). Previously no tap handler existed.
+- **Review prompt push** 2 hours after a job completes, once per job, skipped if already reviewed (migration 009 `job_sync.completed_at`; `cron-worker` step `reviewPrompts`).
+- **Day-before reminder** now fires on the shop's local date-before once `reminder_hour_local` (default 9) has passed, in `shop_timezone`, instead of a fixed 20–28 h window.
+- Tests: 19 function tests (54 steps), 7 app-logic tests, 55 database tests.
+- Still not built from the handbook: "add to calendar" on the booking-confirmed screen; same-device / same-payment-name referral checks.
