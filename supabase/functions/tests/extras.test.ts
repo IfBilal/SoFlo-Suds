@@ -146,6 +146,23 @@ describe('booking title', () => {
     assert.equal((await t.call('GET', '/bookings/xjNoLines', { token: 'tokA' })).json.serviceName, 'Fallback Name');
   });
 });
+describe('service details', () => {
+  test('return a plain-text description, price tiers, duration and add-ons', async () => {
+    const r = await t.call('GET', '/services/s1', { token: 'tokA' });
+    assert.equal(r.status, 200);
+    assert.equal(r.json.description, 'Hand wash & dry\nIncludes:• wheels');
+    assert.deepEqual(r.json.tiers.map((x: { label: string; priceCents: number }) => [x.label, x.priceCents]), [['Sedan', 5000], ['SUV', 6000]]);
+    assert.equal(r.json.durationMinutes, 90);
+    assert.deepEqual(r.json.addOns.map((x: { id: string }) => x.id), ['sAdd']);
+    assert.equal((await t.call('GET', '/services/nope', { token: 'tokA' })).status, 404);
+  });
+  test('html is turned into readable text', async () => {
+    const { htmlToText } = await import('../_shared/text.ts');
+    assert.equal(htmlToText('<p><span>A &amp; B</span></p>\n\n\n<p>C&#8226;D</p><ul><li>x</li></ul>'), 'A & B\n\nC•D\n• x');
+    assert.equal(htmlToText(undefined), '');
+  });
+});
+
 describe('profile edit', () => {
   test('is sent to the shop\'s Urable customer record', async () => {
     const r = await t.call('PATCH', '/me', { token: 'tokA', body: { name: 'Ava Renamed Person', phone: '+13055550111' } });

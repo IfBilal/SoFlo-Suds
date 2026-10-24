@@ -41,7 +41,7 @@ describe('complete_profile', () => {
     assert.equal((await q(`SELECT 1 FROM users WHERE auth_user_id=$1`, [a])).length, 0);
   });
   test('never links a legacy account by email', async () => {
-    await q(`INSERT INTO users (urable_customer_id,name,email,phone,referral_code,password_hash) VALUES ('uL','Legacy','legacy@t.test','1','LLLLLL','h')`);
+    await q(`INSERT INTO users (urable_customer_id,name,email,phone,referral_code) VALUES ('uL','Legacy','legacy@t.test','1','LLLLLL')`);
     const a = '00000000-0000-4000-8000-0000000000c3';
     await q(`INSERT INTO auth.users (id,email) VALUES ($1,'legacy@t.test')`, [a]);
     await assert.rejects(call(a, 'legacy@t.test'), /ACCOUNT_NEEDS_MIGRATION/);
@@ -109,7 +109,7 @@ describe('record_job', () => {
 
 describe('referral abuse defences (handbook 4.6)', () => {
   const mk = async (tag: string, phone: string | null) => (await q<{ id: string }>(
-    `INSERT INTO users (urable_customer_id,name,email,phone,referral_code,password_hash) VALUES ('u'||$1,'R '||$1,$1||'@r.test',$2,upper(left(md5($1),6)),'h') RETURNING id`, [tag, phone]))[0].id;
+    `INSERT INTO users (urable_customer_id,name,email,phone,referral_code) VALUES ('u'||$1,'R '||$1,$1||'@r.test',$2,upper(left(md5($1),6))) RETURNING id`, [tag, phone]))[0].id;
   const refer = (referee: string) => q(`INSERT INTO referrals (referrer_id, referee_id) VALUES ($1,$2)`, [A, referee]);
   const status = async (referee: string) => (await q<{ status: string; reject_reason: string | null }>(`SELECT status, reject_reason FROM referrals WHERE referee_id=$1`, [referee]))[0];
   const rec = (u: string, job: string) => q(`SELECT soflo_private.record_job($1,$2,'v1','completed','paid',now(),10000)`, [u, job]);
@@ -140,8 +140,8 @@ describe('delete_account and lease', () => {
   test('anonymizes, drops push tokens, returns auth id, and is not repeatable', async () => {
     const [{ x }] = await q<{ x: string }>(`SELECT soflo_private.delete_account($1) x`, [A]);
     assert.equal(x, ids.authA);
-    const [u] = await q<{ name: string; email: string; password_hash: string | null; deleted_at: string | null }>(`SELECT name,email,password_hash,deleted_at FROM users WHERE id=$1`, [A]);
-    assert.equal(u.name, 'Deleted customer'); assert.match(u.email, /@deleted\.invalid$/); assert.equal(u.password_hash, null); assert.ok(u.deleted_at);
+    const [u] = await q<{ name: string; email: string; deleted_at: string | null }>(`SELECT name,email,deleted_at FROM users WHERE id=$1`, [A]);
+    assert.equal(u.name, 'Deleted customer'); assert.match(u.email, /@deleted\.invalid$/); assert.ok(u.deleted_at);
     assert.equal((await q(`SELECT 1 FROM push_tokens WHERE user_id=$1`, [A])).length, 0);
     assert.equal((await q(`SELECT soflo_private.delete_account($1) x`, [A]))[0].x, null);
     assert.equal((await as(db, 'authenticated', ids.authA, 'SELECT id FROM users')).length, 0);

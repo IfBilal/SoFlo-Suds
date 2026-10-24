@@ -58,9 +58,9 @@ export async function seed(db: PGlite) {
     INSERT INTO auth.users (id,email) VALUES
       ('${ids.authA}','a@t.test'),('${ids.authB}','b@t.test'),('${ids.authAdmin}','admin@t.test'),
       ('${ids.authDeleted}','gone@t.test'),('${ids.authStranger}','nobody@t.test');
-    INSERT INTO users (id,auth_user_id,urable_customer_id,name,email,phone,referral_code,password_hash) VALUES
-      ('11111111-1111-4111-8111-111111111111','${ids.authA}','uA','Alice','a@t.test','5550001','AAAAAA','legacy-hash'),
-      ('22222222-2222-4222-8222-222222222222','${ids.authB}','uB','Bob','b@t.test','5550002','BBBBBB',NULL);
+    INSERT INTO users (id,auth_user_id,urable_customer_id,name,email,phone,referral_code) VALUES
+      ('11111111-1111-4111-8111-111111111111','${ids.authA}','uA','Alice','a@t.test','5550001','AAAAAA'),
+      ('22222222-2222-4222-8222-222222222222','${ids.authB}','uB','Bob','b@t.test','5550002','BBBBBB');
     INSERT INTO users (id,auth_user_id,urable_customer_id,name,email,phone,referral_code,deleted_at) VALUES
       ('33333333-3333-4333-8333-333333333333','${ids.authDeleted}','uD','Deleted customer','x@deleted.invalid','','DDDDDD',now());
     INSERT INTO admins (id,auth_user_id,email,active) VALUES

@@ -151,7 +151,7 @@ describe('POST /me/complete (signup recovery)', () => {
     assert.equal((await t.sql`SELECT urable_customer_id u FROM users WHERE auth_user_id = ${other}`)[0].u, 'uPrev');
   });
   test('an email already used by a legacy (unlinked) account is never auto-linked', async () => {
-    await t.sql`INSERT INTO users (urable_customer_id,name,email,phone,referral_code,password_hash) VALUES ('uLeg','Legacy','old@t.test','1','OLDOLD','h')`;
+    await t.sql`INSERT INTO users (urable_customer_id,name,email,phone,referral_code) VALUES ('uLeg','Legacy','old@t.test','1','OLDOLD')`;
     const a = '00000000-0000-4000-8000-0000000000e3';
     await t.sql`INSERT INTO auth.users (id, email) VALUES (${a}, 'old@t.test')`;
     identities.tokLegacy = { id: a, email: 'old@t.test', emailConfirmed: true, appMetadata: {}, userMetadata: { name: 'Imposter', phone: '5557777' } };

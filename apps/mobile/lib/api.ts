@@ -1,7 +1,7 @@
 import { functionsBase, publicKey, supabase } from './supabase';
 
 export interface SessionUser { id: string; name: string; email: string; phone?: string; points?: number; notificationAppointments?: boolean; notificationPromos?: boolean }
-export interface Service { id: string; name: string; category: string; description?: string; priceCents?: number; durationMinutes?: number; imageUrl?: string }
+export interface Service { id: string; name: string; category: string; description?: string; priceCents?: number; durationMinutes?: number; imageUrl?: string; tiers?: Array<{ label?: string; priceCents: number; durationMinutes?: number }>; addOns?: Array<{ id: string; name: string; priceCents?: number }> }
 export interface Booking { id: string; serviceId?: string; vehicleId?: string; serviceName: string; vehicleName: string; scheduledAt: string; status: string; location?: string; paymentStatus?: string; totalCents?: number; reward?: { id: string; code: string; name: string } | null; products?: Array<{ productId: string; name: string; quantity: number; priceCents: number }> }
 export interface BookingHandoff { state: 'pending' | 'ambiguous' | 'expired' | 'matched'; booking?: Booking }
 export interface Vehicle { id: string; name: string; year?: number; make?: string; model?: string; color?: string; plate?: string }
@@ -102,6 +102,7 @@ export const endpoints = {
   },
   logout: async () => { await supabase.auth.signOut(); },
   services: () => api<Service[]>('/services'),
+  service: (id: string) => api<Service>(`/services/${encodeURIComponent(id)}`),
   bookings: () => api<Booking[]>('/bookings'),
   startBookingHandoff: () => api<{ attemptId: string; expiresAt: string }>('/bookings/handoff', { method: 'POST' }),
   latestBookingHandoff: () => api<{ attemptId: string; expiresAt: string } | null>('/bookings/handoff/latest'),

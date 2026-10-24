@@ -10,6 +10,7 @@ import type { Router } from './router.ts';
 import { reply } from './router.ts';
 import { balance } from './account.ts';
 import { promoEligible, releasePromo, reservePromo } from '../_shared/promo.ts';
+import { htmlToText } from '../_shared/text.ts';
 import { addProductToJob, applyNextBookingProducts, attachReward, releaseReward, resolveProduct } from '../_shared/extras.ts';
 
 const vehicleSchema = z.object({ make: z.string().trim().min(1).max(50), model: z.string().trim().min(1).max(50), year: z.number().int().min(1900).max(new Date().getFullYear() + 1), color: z.string().trim().min(1).max(50), plate: z.string().trim().max(20).optional() });
@@ -60,9 +61,15 @@ export function customerRoutes(app: Router) {
   });
   app.get('/services/:id', async ({ req, deps, params }) => {
     await requireCustomer(req, deps);
-    const p = (await deps.urable().listServices()).find((x) => x.id === params.id);
+    const all = await deps.urable().listServices();
+    const p = all.find((x) => x.id === params.id);
     if (!p) throw notFound('Service');
-    return { id: p.id, name: p.name, category: p.categoryName || 'Services', priceCents: p.prices?.[0]?.value };
+    const tiers = (p.prices ?? []).map((x) => ({ label: x.label || undefined, priceCents: x.value, durationMinutes: x.duration ?? undefined }));
+    const duration = tiers.find((x) => x.durationMinutes)?.durationMinutes;
+    // Add-ons are services the shop files under an "add-on" category; the booking page lets the customer pick them.
+    const addOns = all.filter((x) => x.id !== p.id && /add-?on/i.test(x.categoryName ?? '') && !/private/i.test(x.categoryName ?? ''))
+      .slice(0, 8).map((x) => ({ id: x.id, name: x.name, priceCents: x.prices?.[0]?.value }));
+    return { id: p.id, name: p.name, category: p.categoryName || 'Services', description: htmlToText(p.description) || undefined, priceCents: p.prices?.[0]?.value, durationMinutes: duration, tiers, addOns };
   });
 
   app.get('/vehicles', async ({ req, deps }) => (await deps.urable().listVehicles((await requireCustomer(req, deps)).urableCustomerId)).map(simpleVehicle));

@@ -32,6 +32,7 @@ export interface UrablePrice {
   value: number; // cents
   label?: string;
   sku?: string;
+  duration?: number | null; // minutes when the shop sets one
 }
 
 export interface UrableProduct {
@@ -40,6 +41,7 @@ export interface UrableProduct {
   type: 'product' | 'service';
   industry?: string;
   categoryName?: string;
+  description?: string;
   prices?: UrablePrice[];
   virtualShop?: boolean;
 }

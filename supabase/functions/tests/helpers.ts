@@ -26,7 +26,7 @@ export class FakeUrable {
     { id: 'jobB', customerRef: 'uB', itemRefs: ['vB'], status: 'scheduled', paymentStatus: 'unpaid', start: 1_900_000_000_000 },
   ];
   payments: UrablePayment[] = [{ id: 'p1', customerRef: 'uA', total: 100, status: 'paid' }, { id: 'pX', customerRef: 'uB', total: 5 }];
-  listServices() { return Promise.resolve([{ id: 's1', name: 'Wash', type: 'service' as const, categoryName: 'Washes', prices: [{ value: 5000 }], virtualShop: true }]); }
+  listServices() { return Promise.resolve([{ id: 's1', name: 'Wash', type: 'service' as const, categoryName: 'Washes', description: '<p>Hand wash &amp; dry</p><p>Includes:&#8226; wheels</p>', prices: [{ value: 5000, label: 'Sedan' }, { value: 6000, label: 'SUV', duration: 90 }], virtualShop: true }, { id: 'sAdd', name: 'Air Freshener', type: 'service' as const, categoryName: 'Add-On Services', prices: [{ value: 1500 }], virtualShop: true }]); }
   listAllServices() { return this.listServices(); }
   listShopProducts() { return Promise.resolve([]); }
   listVehicles(c: string) { return Promise.resolve(this.vehicles[c] ?? []); }
