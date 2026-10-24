@@ -13,8 +13,12 @@ test('rollback drill: the latest migrations can be reversed in order and re-appl
   const hasColumn = (t: string, c: string) => exists(db, `SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='${t}' AND column_name='${c}'`);
   const bannerKey = async () => JSON.stringify((await db.query<{ k: string }>(`SELECT pg_get_functiondef('public.shop_config'::regproc) k`)).rows[0].k).includes('promo_banner_text');
 
+  assert.equal(await hasColumn('users', 'device_id'), true); assert.equal(await hasColumn('job_sync', 'payment_fingerprint'), true);
   assert.equal(await hasTable('refresh_sessions'), false); assert.equal(await hasColumn('users', 'password_hash'), false);
   assert.equal(await hasTable('booking_products'), true); assert.equal(await bannerKey(), true);
+
+  await db.exec(read('rollback', '20261024000013_down.sql'));
+  assert.equal(await hasColumn('users', 'device_id'), false); assert.equal(await hasColumn('job_sync', 'payment_fingerprint'), false);
 
   await db.exec(read('rollback', '20261024000012_down.sql'));
   assert.equal(await hasTable('refresh_sessions'), true); assert.equal(await hasTable('password_resets'), true);
@@ -27,7 +31,7 @@ test('rollback drill: the latest migrations can be reversed in order and re-appl
   assert.equal(await hasTable('booking_products'), false); assert.equal(await hasColumn('reward_redemptions', 'applied_job_id'), false);
 
   // and forward again: the same files re-apply cleanly
-  for (const f of ['20261024000010_booking_extras.sql', '20261024000011_promo_banner.sql', '20261024000012_retire_legacy_auth.sql']) await db.exec(read('migrations', f));
-  assert.equal(await hasTable('booking_products'), true); assert.equal(await bannerKey(), true); assert.equal(await hasTable('refresh_sessions'), false);
+  for (const f of ['20261024000010_booking_extras.sql', '20261024000011_promo_banner.sql', '20261024000012_retire_legacy_auth.sql', '20261024000013_billing_and_referral_checks.sql']) await db.exec(read('migrations', f));
+  assert.equal(await hasTable('booking_products'), true); assert.equal(await bannerKey(), true); assert.equal(await hasTable('refresh_sessions'), false); assert.equal(await hasColumn('users', 'device_id'), true);
   await db.close();
 });

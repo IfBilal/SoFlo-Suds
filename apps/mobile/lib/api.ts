@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { functionsBase, publicKey, supabase } from './supabase';
 
 export interface SessionUser { id: string; name: string; email: string; phone?: string; points?: number; notificationAppointments?: boolean; notificationPromos?: boolean }
@@ -12,6 +14,20 @@ export interface GalleryProject { id: string; title: string; caption?: string; t
 export interface Review { id: string; rating: number; body?: string; customerName: string; createdAt: string }
 export interface ShopConfig { shopAddress?: string | null; shopPhone?: string | null; shopEmail?: string | null; mobileAreaText?: string | null; minAppVersion?: string | null; maintenanceMessage?: string | null; promoBannerText?: string | null }
 
+
+let installIdCache: string | undefined;
+/** A random id kept for the life of this app install. It only lets the server refuse a "referral" between accounts made on the same device. */
+async function installId(): Promise<string> {
+  if (installIdCache) return installIdCache;
+  const fresh = () => Array.from({ length: 4 }, () => Math.random().toString(36).slice(2, 8)).join('');
+  try {
+    const stored = Platform.OS === 'web' ? globalThis.localStorage?.getItem('soflo_install_id') : await SecureStore.getItemAsync('soflo_install_id');
+    if (stored) return (installIdCache = stored);
+    const id = fresh();
+    if (Platform.OS === 'web') globalThis.localStorage?.setItem('soflo_install_id', id); else await SecureStore.setItemAsync('soflo_install_id', id);
+    return (installIdCache = id);
+  } catch { return (installIdCache = fresh()); }
+}
 
 export class ApiError extends Error { constructor(readonly status: number, readonly code: string, message: string) { super(message); } }
 
@@ -82,7 +98,7 @@ export const endpoints = {
     if (data.user && data.user.identities?.length === 0) throw new ApiError(409, 'EMAIL_TAKEN', 'This email already has an account.');
     return !!data.session;
   },
-  completeProfile: () => api<SessionUser>('/me/complete', { method: 'POST', body: JSON.stringify({}) }),
+  completeProfile: async () => api<SessionUser>('/me/complete', { method: 'POST', body: JSON.stringify({}), headers: { 'x-device-id': await installId() } }),
   forgot: async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase(), { redirectTo: AUTH_REDIRECT });
     if (error && error.status !== 400) throw authError(error, 'Password reset is temporarily unavailable. Please contact the shop.');

@@ -141,6 +141,16 @@ describe('POST /me/complete (signup recovery)', () => {
     assert.equal(t.urable.createdCustomers, 1);
     assert.equal((await t.sql`SELECT 1 FROM referrals WHERE referee_id = ${first.json.id} AND referrer_id = ${A}`).length, 1);
   });
+  test('the app install id is stored once at signup; a malformed one is ignored (handbook 4.6 device check)', async () => {
+    const dev = '00000000-0000-4000-8000-0000000000f3', devBad = '00000000-0000-4000-8000-0000000000f4';
+    await t.sql`INSERT INTO auth.users (id, email) VALUES (${dev}, 'dev@t.test'), (${devBad}, 'devbad@t.test')`;
+    identities.tokDev = { id: dev, email: 'dev@t.test', emailConfirmed: true, appMetadata: { urable_customer_id: 'uDev' }, userMetadata: { name: 'Dev Person', phone: '5557771' } };
+    identities.tokDevBad = { id: devBad, email: 'devbad@t.test', emailConfirmed: true, appMetadata: { urable_customer_id: 'uDevBad' }, userMetadata: { name: 'Dev Bad', phone: '5557772' } };
+    assert.equal((await t.call('POST', '/me/complete', { token: 'tokDev', body: {}, headers: { 'x-device-id': 'install-abc12345' } })).status, 201);
+    assert.equal((await t.call('POST', '/me/complete', { token: 'tokDevBad', body: {}, headers: { 'x-device-id': 'bad id;drop' } })).status, 201);
+    assert.equal((await t.sql`SELECT device_id FROM users WHERE auth_user_id = ${dev}`)[0].device_id, 'install-abc12345');
+    assert.equal((await t.sql`SELECT device_id FROM users WHERE auth_user_id = ${devBad}`)[0].device_id, null);
+  });
   test('Urable id is kept in server-only metadata so a DB failure retry reuses it', async () => {
     const other = '00000000-0000-4000-8000-0000000000e2';
     await t.sql`INSERT INTO auth.users (id, email) VALUES (${other}, 'dup@t.test')`;

@@ -91,6 +91,19 @@ describe('record_job', () => {
     await rec(B, 'j2', 'completed', 'refunded', 20050);
     assert.equal(await bal(B), start - 200);
   });
+  test('cancellation after an award writes one compensating entry (handbook 4.5)', async () => {
+    const start = await bal(B);
+    assert.equal((await rec(B, 'j4', 'completed', 'paid', 30000)).credited, 300);
+    for (let i = 0; i < 2; i++) assert.equal((await rec(B, 'j4', 'canceled', 'paid', 30000)).reversed, 300);
+    assert.equal(await bal(B), start);
+  });
+  test('any refund wording reverses the award, and a refund of an unpaid job reverses nothing', async () => {
+    const start = await bal(B);
+    await rec(B, 'j5', 'completed', 'paid', 10000);
+    assert.equal((await rec(B, 'j5', 'completed', 'partiallyRefunded', 10000)).reversed, 100);
+    assert.equal(await bal(B), start);
+    assert.equal((await rec(B, 'j6', 'completed', 'refunded', 0)).reversed, 0);
+  });
   test('another user cannot hijack a job id', async () => {
     assert.equal((await rec(A, 'j1', 'completed', 'paid', 99999)).skipped, true);
     assert.equal((await q<{ user_id: string }>(`SELECT user_id FROM job_sync WHERE urable_job_id='j1'`))[0].user_id, B);
@@ -129,6 +142,24 @@ describe('referral abuse defences (handbook 4.6)', () => {
     assert.equal(await bal(A), a0);
     await q(`DELETE FROM settings WHERE key='referral_monthly_cap'`);
   });
+  test('a referee on the same device as the referrer is rejected', async () => {
+    const dev = await mk('dupdev', '+19995550003'); await refer(dev);
+    await q(`UPDATE users SET device_id='install-aaaa1111' WHERE id IN ($1,$2)`, [A, dev]);
+    const a0 = await bal(A); await rec(dev, 'jdv1');
+    assert.deepEqual(await status(dev), { status: 'rejected', reject_reason: 'duplicate_device' });
+    assert.equal(await bal(A), a0);
+  });
+  test('a referee who paid with the same card as the referrer is rejected; a different card is rewarded', async () => {
+    const fp = (u: string, job: string, f: string) => q(`SELECT soflo_private.record_job($1,$2,'v1','completed','paid',now(),10000,$3)`, [u, job, f]);
+    await fp(A, 'jpa1', 'fingerprint-card-1');
+    const same = await mk('samecard', '+19995550004'); await refer(same);
+    const a0 = await bal(A); await fp(same, 'jps1', 'fingerprint-card-1');
+    assert.deepEqual(await status(same), { status: 'rejected', reject_reason: 'duplicate_payment' });
+    assert.equal(await bal(A), a0); // no referral bonus for the referrer
+    const other = await mk('othercard', '+19995550005'); await refer(other);
+    const a1 = await bal(A); await fp(other, 'jps2', 'fingerprint-card-2');
+    assert.equal((await status(other)).status, 'rewarded'); assert.equal(await bal(A), a1 + 50);
+  });
   test('without the setting the cap defaults to 20 and a normal referral is rewarded', async () => {
     const ok = await mk('okref', '+19995550002'); await refer(ok);
     const a0 = await bal(A); await rec(ok, 'jo1');
@@ -143,6 +174,7 @@ describe('delete_account and lease', () => {
     const [u] = await q<{ name: string; email: string; deleted_at: string | null }>(`SELECT name,email,deleted_at FROM users WHERE id=$1`, [A]);
     assert.equal(u.name, 'Deleted customer'); assert.match(u.email, /@deleted\.invalid$/); assert.ok(u.deleted_at);
     assert.equal((await q(`SELECT 1 FROM push_tokens WHERE user_id=$1`, [A])).length, 0);
+    assert.equal((await q<{ device_id: string | null }>(`SELECT device_id FROM users WHERE id=$1`, [A]))[0].device_id, null);
     assert.equal((await q(`SELECT soflo_private.delete_account($1) x`, [A]))[0].x, null);
     assert.equal((await as(db, 'authenticated', ids.authA, 'SELECT id FROM users')).length, 0);
   });

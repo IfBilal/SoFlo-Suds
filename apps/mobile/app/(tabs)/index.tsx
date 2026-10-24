@@ -8,6 +8,7 @@ import { endpoints } from '@/lib/api';
 import { useSession } from '@/lib/session';
 import { font, palette as c } from '@/theme';
 import { servicePhoto } from '@/lib/servicePhoto';
+import { PushPrompt } from '@/components/PushPrompt';
 
 export default function HomeScreen() {
   const { user } = useSession();
@@ -17,6 +18,7 @@ export default function HomeScreen() {
   const bookings = useQuery({ queryKey: ['bookings'], queryFn: endpoints.bookings });
   const upcoming = bookings.data?.find(b => !['completed', 'cancelled', 'canceled'].includes(b.status.toLowerCase()));
   return <Screen>
+    <PushPrompt userId={user?.id} />
     <View style={styles.greeting}><View><BrandText style={styles.hello}>Hi, {(profile.data?.name ?? user?.name)?.split(' ')[0] ?? 'there'}.</BrandText><BrandText muted style={{ fontSize: 12 }}>Your vehicle. Elevated.</BrandText></View><Pressable onPress={() => router.push('/(tabs)/rewards')} style={styles.points}><Star size={13} color="white" /><BrandText style={{ fontSize: 11, color: 'white' }}>{profile.data?.points ?? user?.points ?? 0} pts</BrandText></Pressable></View>
     <View style={styles.hero}><Image source={require('../../assets/brand/hero.jpg')} style={styles.heroImage} resizeMode="cover" /><LinearGradient pointerEvents="none" colors={['#08080815', '#080808E8', '#080808']} locations={[0, .73, 1]} style={StyleSheet.absoluteFill} /><View style={styles.heroShade}><BrandText style={styles.eyebrow}>{(config.data?.mobileAreaText || 'SOFLO SUDS VEHICLE CARE').toUpperCase()}</BrandText><BrandText style={styles.heroTitle}>GREAT CARE.{'\n'}EVERY SURFACE.</BrandText><BrandText style={styles.heroCopy}>Detailing, ceramic coating and paint protection built around your vehicle.</BrandText><Button label="Book Now / Schedule  →" onPress={() => router.push('/services')} style={{ marginTop: 22, minHeight: 50 }} /><Pressable onPress={() => router.push('/services')} style={styles.heroSecondary}><BrandText style={{ color: c.cyan, fontSize: 12 }}>Explore ceramic protection  →</BrandText></Pressable></View></View>
     {!!config.data?.promoBannerText && <Pressable onPress={() => router.push('/services')} accessibilityRole="button"><Card accent="magenta" style={{ marginTop: 14 }}><BrandText style={{ color: c.magenta, fontSize: 10, letterSpacing: 2 }}>OFFER</BrandText><BrandText style={{ fontSize: 16, fontWeight: '600', marginTop: 6 }}>{config.data.promoBannerText}</BrandText></Card></Pressable>}

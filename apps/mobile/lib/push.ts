@@ -6,6 +6,15 @@ import { api } from './api';
 /** Remote push needs a real device and a development/production build (not Expo Go or web). */
 export const pushSupported = () => !(Platform.OS === 'web' || !Device.isDevice || Constants.executionEnvironment === ExecutionEnvironment.StoreClient);
 
+/** Where the phone's notification permission stands, without asking. 'undetermined' is the only state worth explaining first. */
+export async function pushPermissionState(): Promise<'granted' | 'undetermined' | 'denied' | 'unavailable'> {
+  if (!pushSupported()) return 'unavailable';
+  const Notifications = await import('expo-notifications');
+  const current = await Notifications.getPermissionsAsync();
+  if (current.granted) return 'granted';
+  return current.canAskAgain && current.status === 'undetermined' ? 'undetermined' : 'denied';
+}
+
 export async function enablePushNotifications(): Promise<'enabled' | 'denied' | 'unavailable'> {
   // Expo Go does not include Android remote push support. Loading expo-notifications
   // there can throw before this function runs because its topic module is absent.

@@ -52,6 +52,9 @@ export function accountRoutes(app: Router) {
     try {
       await deps.sql`SELECT soflo_private.complete_profile(${who.id}, ${email}, ${input.name}, ${input.phone}, ${urableId}, ${input.referralCode ?? null})`;
     } catch (error) { mapSql(error); }
+    // Install id sent by the app (handbook 4.6): lets the referral check refuse a "referral" made from the same device.
+    const device = req.headers.get('x-device-id')?.trim() ?? '';
+    if (/^[A-Za-z0-9_-]{8,100}$/.test(device)) await deps.sql`UPDATE users SET device_id = ${device} WHERE auth_user_id = ${who.id} AND device_id IS NULL`;
     return reply(await profile(deps, who.id), 201);
   });
 

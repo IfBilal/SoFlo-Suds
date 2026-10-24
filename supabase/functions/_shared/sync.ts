@@ -6,6 +6,29 @@ import { sendPushToUser } from './push.ts';
 
 export const ownsJob = (job: UrableJob, customerId: string) => job.customerRef === customerId || !!job.customerRef?.endsWith('/' + customerId);
 export const jobVehicleId = (job: UrableJob) => job.itemRefs?.[0]?.split('/').at(-1) ?? '';
+/** Points are earned on what was paid after discounts, excluding tips (handbook 4.5): never more than the invoice total. */
+export function earnedCents(job: UrableJob): number {
+  const paid = Math.max(0, job.invoice?.amountPaid ?? 0), total = job.invoice?.total;
+  return typeof total === 'number' && total >= 0 ? Math.min(paid, total) : paid;
+}
+
+/**
+ * SHA-256 of the card brand + last four that paid the job (Urable's `paymentMethodDetails`), used only to spot a customer
+ * "referring" themselves with the same card (handbook 4.6). Looked up once per paid job; the card detail itself is not stored.
+ */
+async function cardFingerprint(deps: Deps, userId: string, job: UrableJob): Promise<string | null> {
+  if (job.paymentStatus !== 'paid' || !job.customerRef) return null;
+  const [known] = await deps.sql`SELECT payment_fingerprint AS f FROM job_sync WHERE urable_job_id = ${job.id} AND user_id = ${userId}`;
+  if (known?.f) return known.f as string;
+  try {
+    const customerId = job.customerRef.split('/').at(-1)!;
+    const payment = (await deps.urable().listPayments(customerId)).find((p) =>
+      p.status === 'paid' && !!p.paymentMethodDetails && p.jobOrderRefs?.some((ref) => ref === job.id || ref.endsWith('/' + job.id)));
+    if (!payment?.paymentMethodDetails) return null;
+    const bytes = new TextEncoder().encode(payment.paymentMethodDetails.trim().toLowerCase());
+    return [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map((b) => b.toString(16).padStart(2, '0')).join('');
+  } catch { return null; } // a failed lookup only skips this extra abuse check; the next sync retries
+}
 const done = (s: string) => ['completed', 'canceled', 'cancelled'].includes(s.toLowerCase());
 
 export interface SyncStats { users: number; jobs: number; failed: number; wrapped: boolean; skipped?: boolean }
@@ -16,8 +39,9 @@ export async function recordJob(deps: Deps, userId: string, job: UrableJob): Pro
   if (!vehicle) return;
   await settlePromo(deps.sql, job);
   if (['canceled', 'cancelled'].includes(job.status.toLowerCase())) await releaseReward(deps.sql, job.id);
+  const fingerprint = await cardFingerprint(deps, userId, job);
   const [row] = await deps.sql`SELECT soflo_private.record_job(${userId}, ${job.id}, ${vehicle}, ${job.status}, ${job.paymentStatus ?? null},
-      ${job.start ? new Date(job.start) : null}, ${job.invoice?.amountPaid ?? 0}) AS r`;
+      ${job.start ? new Date(job.start) : null}, ${earnedCents(job)}, ${fingerprint}) AS r`;
   const r = row.r as { skipped?: boolean; isNew?: boolean; oldStatus?: string };
   if (r.skipped) return;
   if (job.status.toLowerCase() === 'completed') {

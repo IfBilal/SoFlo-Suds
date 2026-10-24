@@ -26,6 +26,7 @@ export interface UrablePayment {
   customerRef?: string;
   jobOrderRefs?: string[];
   paymentMethod?: string;
+  paymentMethodDetails?: string; // e.g. "VISA ****1234"
 }
 
 export interface UrablePrice {
