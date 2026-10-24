@@ -10,7 +10,7 @@ const migrations = fileURLToPath(new URL('../migrations', import.meta.url));
 // Default privileges mirror Supabase (new public tables are open to the client roles),
 // so the tests prove our migration actually revokes them.
 const platform = `
-CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS;
+CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE supabase_auth_admin NOLOGIN; CREATE ROLE service_role NOLOGIN BYPASSRLS;
 GRANT anon, authenticated, service_role TO CURRENT_USER;
 CREATE SCHEMA auth; CREATE SCHEMA storage;
 CREATE TABLE auth.users (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), email text);

@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { functionsBase, publicKey, supabase } from './supabase';
+import { authMessage } from './authMessages';
 
 export interface SessionUser { id: string; name: string; email: string; phone?: string; points?: number; notificationAppointments?: boolean; notificationPromos?: boolean }
 export interface Service { id: string; name: string; category: string; description?: string; priceCents?: number; durationMinutes?: number; imageUrl?: string; tiers?: Array<{ label?: string; priceCents: number; durationMinutes?: number }>; addOns?: Array<{ id: string; name: string; priceCents?: number }> }
@@ -60,18 +61,8 @@ export async function api<T>(path: string, options: RequestInit = {}, retry = tr
   return payload as T;
 }
 
-const authMessages: Record<string, string> = {
-  invalid_credentials: 'Email or password is incorrect.',
-  email_not_confirmed: 'Please confirm your email first. Check your inbox for the link.',
-  user_already_exists: 'This email already has an account.',
-  email_exists: 'This email already has an account.',
-  weak_password: 'Choose a stronger password (at least 8 characters).',
-  over_request_rate_limit: 'Too many attempts. Please wait a few minutes and try again.',
-  over_email_send_rate_limit: 'Too many emails requested. Please wait a few minutes and try again.',
-};
-/** Never surface raw Supabase Auth messages. */
-export function authError(error: { code?: string; status?: number } | null | undefined, fallback = 'Something went wrong. Please try again.'): ApiError {
-  return new ApiError(error?.status ?? 400, error?.code ?? 'AUTH_FAILED', (error?.code && authMessages[error.code]) || fallback);
+export function authError(error: { code?: string; status?: number; message?: string } | null | undefined, fallback = 'Something went wrong. Please try again.'): ApiError {
+  return new ApiError(error?.status ?? 400, error?.code ?? 'AUTH_FAILED', authMessage(error, fallback));
 }
 
 export const AUTH_REDIRECT = 'soflosuds://reset';

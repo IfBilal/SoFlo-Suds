@@ -17,6 +17,10 @@ test('rollback drill: the latest migrations can be reversed in order and re-appl
   assert.equal(await hasTable('refresh_sessions'), false); assert.equal(await hasColumn('users', 'password_hash'), false);
   assert.equal(await hasTable('booking_products'), true); assert.equal(await bannerKey(), true);
 
+  assert.equal(await hasTable('login_failures'), true);
+  await db.exec(read('rollback', '20261024000014_down.sql'));
+  assert.equal(await hasTable('login_failures'), false);
+
   await db.exec(read('rollback', '20261024000013_down.sql'));
   assert.equal(await hasColumn('users', 'device_id'), false); assert.equal(await hasColumn('job_sync', 'payment_fingerprint'), false);
 
@@ -31,7 +35,7 @@ test('rollback drill: the latest migrations can be reversed in order and re-appl
   assert.equal(await hasTable('booking_products'), false); assert.equal(await hasColumn('reward_redemptions', 'applied_job_id'), false);
 
   // and forward again: the same files re-apply cleanly
-  for (const f of ['20261024000010_booking_extras.sql', '20261024000011_promo_banner.sql', '20261024000012_retire_legacy_auth.sql', '20261024000013_billing_and_referral_checks.sql']) await db.exec(read('migrations', f));
+  for (const f of ['20261024000010_booking_extras.sql', '20261024000011_promo_banner.sql', '20261024000012_retire_legacy_auth.sql', '20261024000013_billing_and_referral_checks.sql', '20261024000014_login_rate_limit.sql']) await db.exec(read('migrations', f));
   assert.equal(await hasTable('booking_products'), true); assert.equal(await bannerKey(), true); assert.equal(await hasTable('refresh_sessions'), false); assert.equal(await hasColumn('users', 'device_id'), true);
   await db.close();
 });

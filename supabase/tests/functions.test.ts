@@ -188,3 +188,24 @@ describe('delete_account and lease', () => {
     assert.equal(c3.claimed, true); assert.equal(c3.cursor, B);
   });
 });
+
+describe('login rate limit hook (handbook 7)', () => {
+  const hook = (valid: boolean, user = A) => q<{ r: { decision: string; message?: string } }>(`SELECT public.hook_password_verification_attempt($1::jsonb) r`, [JSON.stringify({ user_id: user, valid })]).then((x) => x[0].r.decision);
+  test('five wrong passwords lock the account, even for the right password, and a login before that resets the count', async () => {
+    for (let i = 0; i < 4; i++) assert.equal(await hook(false, B), 'continue');
+    assert.equal(await hook(true, B), 'continue');            // success clears the failures
+    for (let i = 0; i < 5; i++) assert.equal(await hook(false, B), 'continue');
+    assert.equal(await hook(false, B), 'reject');
+    assert.equal(await hook(true, B), 'reject');
+    assert.equal(await hook(true, A), 'continue');            // other accounts are unaffected
+  });
+  test('the lock ends after 15 minutes', async () => {
+    await q(`UPDATE login_failures SET at = now() - interval '16 minutes' WHERE user_id = $1`, [B]);
+    assert.equal(await hook(true, B), 'continue');
+  });
+  test('client roles cannot call the hook or read the failures', async () => {
+    assert.ok(await denied(as(db, 'authenticated', ids.authA, `SELECT public.hook_password_verification_attempt('{"user_id":"${A}","valid":false}'::jsonb)`)));
+    assert.ok(await denied(as(db, 'anon', null, `SELECT * FROM login_failures`)));
+    assert.ok(await denied(as(db, 'authenticated', ids.authA, `SELECT * FROM login_failures`)));
+  });
+});
