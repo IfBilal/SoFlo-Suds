@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "712759283199",
+    "project_id": "soflo-suds-push",
+    "storage_bucket": "soflo-suds-push.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:712759283199:android:c66ad509de84928008abca",
+        "android_client_info": {
+          "package_name": "com.soflosuds.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlgiQzgBz52uusAhRIuwVIzGESOoBtTMA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
