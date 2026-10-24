@@ -14,6 +14,7 @@ const gallerySchema = z.object({ title: z.string().trim().min(2).max(150), capti
 const warrantySchema = z.object({ urableCustomerId: z.string().min(1), urableVehicleId: z.string().min(1), urableJobId: z.string().min(1), product: z.string().trim().max(120).nullable().default(null), coverage: z.string().trim().max(500).nullable().default(null), appliedOn: z.iso.date(), expiresOn: z.iso.date().nullable().default(null), documentUrl: z.url().startsWith('https://').nullable().default(null) }).refine((x) => !x.expiresOn || x.expiresOn >= x.appliedOn, { path: ['expiresOn'], message: 'Expiry must be after application.' });
 const productSchema = z.object({ name: z.string().trim().min(2).max(120), brand: z.string().trim().max(80).nullable().default(null), category: z.string().trim().max(80).nullable().default(null), description: z.string().trim().max(1000).nullable().default(null), priceCents: z.number().int().nonnegative(), urableProductId: z.string().trim().nullable().default(null), imageUrl: z.url().startsWith('https://').nullable().default(null), active: z.boolean().default(true) });
 const settingsKeys = ['shop_address', 'shop_phone', 'shop_email', 'mobile_area_text', 'reminder_hour_local', 'min_app_version', 'maintenance_message', 'cancel_window_hours', 'points_per_usd', 'referral_reward_points', 'shop_timezone', 'protection_categories'];
+const numericSettings = ['reminder_hour_local', 'cancel_window_hours', 'points_per_usd', 'referral_reward_points'];
 const settingsSchema = z.object({
   shop_address: z.string().trim().max(300).optional(), shop_phone: z.string().trim().max(40).optional(),
   shop_email: z.union([z.email(), z.literal('')]).optional(), mobile_area_text: z.string().trim().max(300).optional(),
@@ -133,8 +134,12 @@ export function adminRoutes(app: Router) {
 
   listOf('/admin/settings', async (d) => Object.fromEntries((await d.sql`SELECT key, value FROM settings WHERE key = ANY(${settingsKeys})`).map((r) => [r.key, r.value])));
   app.put('/admin/settings', admin(async ({ deps, json }, a) => {
-    const body = settingsSchema.parse(await json());
-    await deps.sql.begin(async (tx) => { for (const [key, value] of Object.entries(body)) await tx`INSERT INTO settings (key,value) VALUES (${key}, ${tx.json(value as never)}) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`; });
+    // A blank numeric field means "back to the default": drop the row instead of storing 0.
+    const raw = await json() as Record<string, unknown>;
+    const cleared = numericSettings.filter((k) => raw && typeof raw === 'object' && (raw[k] === '' || raw[k] === null));
+    for (const k of cleared) delete raw[k];
+    const body = settingsSchema.parse(raw);
+    await deps.sql.begin(async (tx) => { for (const key of cleared) await tx`DELETE FROM settings WHERE key = ${key}`; for (const [key, value] of Object.entries(body)) await tx`INSERT INTO settings (key,value) VALUES (${key}, ${tx.json(value as never)}) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`; });
     await audit(deps, a, 'update', 'settings'); return { ok: true };
   }));
 
