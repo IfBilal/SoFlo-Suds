@@ -6,6 +6,7 @@ import { BrandText, Button, Card, Screen, StateCard } from '@/components/BrandUI
 import { UrableBookingWebView } from '@/components/UrableBookingWebView';
 import { endpoints } from '@/lib/api';
 import { calendarUrl } from '@/lib/calendarLink';
+import { addToCalendar } from '@/lib/addToCalendar';
 import { palette as c } from '@/theme';
 
 export default function BookingScreen() {
@@ -53,7 +54,7 @@ export default function BookingScreen() {
         <BrandText>{handoff.data.booking.serviceName}</BrandText>
         <BrandText muted>{handoff.data.booking.paymentStatus === 'paid' ? 'Payment confirmed by Urable' : 'Payment pending in Urable'}</BrandText>
         <Button label="View booking" onPress={() => router.replace({ pathname: '/booking-detail' as never, params: { id: handoff.data!.booking!.id } })} style={{ marginTop: 18 }} />
-        {!!calendarUrl(handoff.data.booking) && <Button label="Add to calendar" variant="secondary" onPress={() => void Linking.openURL(calendarUrl(handoff.data!.booking!)!)} style={{ marginTop: 10 }} />}
+        {!!calendarUrl(handoff.data.booking) && <Button label="Add to calendar" variant="secondary" onPress={() => void addToCalendar(handoff.data!.booking!)} style={{ marginTop: 10 }} />}
       </> : <>
         <BrandText muted>{handoff.data?.state === 'expired' ? 'This booking check expired. If you completed checkout, contact the shop with your Urable booking number.' : handoff.data?.state === 'ambiguous' ? 'We found more than one new appointment. Enter the booking number from Urable’s confirmation to identify yours.' : 'If you completed checkout, we’re checking Urable for your appointment. Do not submit another booking while this check is pending.'}</BrandText>
         {(handoff.data?.state === 'ambiguous' || !!confirmationNumber) && <TextInput accessibilityLabel="Urable booking number" keyboardType="number-pad" placeholder="Booking number" placeholderTextColor={c.muted} value={confirmationNumber} onChangeText={setConfirmationNumber} style={styles.confirmationInput} />}
