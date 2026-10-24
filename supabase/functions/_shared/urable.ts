@@ -229,6 +229,14 @@ export class UrableClient {
     return result.data.id;
   }
 
+  async updateCustomer(id: string, input: { firstName?: string; lastName?: string; phone?: string }): Promise<void> {
+    await this.request<UrableCreated>('PATCH', `/customers/${encodeURIComponent(id)}`, {
+      ...(input.firstName !== undefined ? { firstName: input.firstName } : {}),
+      ...(input.lastName !== undefined ? { lastName: input.lastName } : {}),
+      ...(input.phone ? { phoneNumbers: [{ label: 'Mobile', value: input.phone }] } : {}),
+    });
+  }
+
   async createVehicle(input: { customerId: string; name: string; notes?: string }): Promise<string> {
     const result = await this.request<UrableCreated>('POST', '/items', {
       customerId: input.customerId,

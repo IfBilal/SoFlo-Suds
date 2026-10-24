@@ -45,6 +45,7 @@ export class FakeUrable {
     return Promise.resolve({ ...job, invoice: { ...job.invoice, total: sub - off } });
   }
   failNote = false;
+  updateCustomer(id: string, i: unknown) { this.calls.push('updateCustomer:' + id + ':' + JSON.stringify(i)); return Promise.resolve(); }
   appendNote(job: UrableJob, line: string) {
     this.calls.push(`note:${job.id}:${line.split(':')[0]}`);
     if (this.failNote) return Promise.reject(Object.assign(new Error('urable down'), { status: 503 }));

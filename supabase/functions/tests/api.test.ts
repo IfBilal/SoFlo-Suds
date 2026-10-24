@@ -195,12 +195,14 @@ describe('admin boundary', () => {
     assert.equal((await t.call('PUT', '/admin/settings', { token: 'tokAdmin', body: { shop_phone: '555-1', bogus: 1 } })).status, 400);
     assert.equal((await t.call('PUT', '/admin/settings', { token: 'tokAdmin', body: { shop_phone: '555-1', points_per_usd: 2 } })).status, 200);
     assert.equal((await t.call('GET', '/admin/settings', { token: 'tokAdmin' })).json.shop_phone, '555-1');
+    assert.equal((await t.call('PUT', '/admin/settings', { token: 'tokAdmin', body: { promo_banner_text: '10% off ceramic this week' } })).status, 200);
+    assert.equal((await t.call('GET', '/admin/settings', { token: 'tokAdmin' })).json.promo_banner_text, '10% off ceramic this week');
     // a cleared numeric field reverts to the default instead of being stored as 0
     assert.equal((await t.call('PUT', '/admin/settings', { token: 'tokAdmin', body: { points_per_usd: '', cancel_window_hours: '' } })).status, 200);
     const after = (await t.call('GET', '/admin/settings', { token: 'tokAdmin' })).json;
     assert.ok(!('points_per_usd' in after) && !('cancel_window_hours' in after), JSON.stringify(after));
     const audit = await t.sql`SELECT action, entity FROM admin_audit ORDER BY created_at`;
-    assert.equal(audit.length, 4); assert.ok(audit.some((a) => a.entity === 'promo' && a.action === 'create'));
+    assert.equal(audit.length, 5); assert.ok(audit.some((a) => a.entity === 'promo' && a.action === 'create'));
   });
   test('customer search escapes wildcard characters', async () => {
     assert.equal((await t.call('GET', '/admin/customers?q=%25%25', { token: 'tokAdmin' })).json.length, 0);

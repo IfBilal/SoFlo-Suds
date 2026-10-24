@@ -253,7 +253,8 @@ export function customerRoutes(app: Router) {
     const [points, rewards, activity, redemptions] = await Promise.all([
       balance(deps, user.id),
       sql`SELECT id, name, description, points_cost AS "pointsCost" FROM rewards WHERE active = true ORDER BY points_cost`,
-      sql`SELECT id, reason AS label, delta, created_at AS "createdAt" FROM points_ledger WHERE user_id = ${user.id} ORDER BY created_at DESC LIMIT 100`,
+      sql`SELECT id, CASE reason WHEN 'job_completed' THEN 'Completed service' WHEN 'referral_referrer' THEN 'Referral reward' WHEN 'referral_referee' THEN 'Welcome bonus' WHEN 'redeem' THEN 'Reward redeemed'
+        WHEN 'job_reversed' THEN 'Service refunded' WHEN 'admin_adjust' THEN 'Points adjustment' ELSE initcap(replace(reason, '_', ' ')) END AS label, delta, created_at AS "createdAt" FROM points_ledger WHERE user_id = ${user.id} ORDER BY created_at DESC LIMIT 100`,
       sql`SELECT rr.id, rr.code, rr.status, rr.applied_job_id AS "appliedJobId", r.name FROM reward_redemptions rr JOIN rewards r ON r.id = rr.reward_id WHERE rr.user_id = ${user.id} ORDER BY rr.created_at DESC`,
     ]);
     return { points, rewards, activity, redemptions, referralCode: user.referralCode };
@@ -343,6 +344,7 @@ export function customerRoutes(app: Router) {
   });
   app.get('/reviews', async ({ req, deps }) => {
     await requireCustomer(req, deps);
-    return await deps.sql`SELECT r.id, r.rating, r.body, r.created_at AS "createdAt", u.name AS "customerName" FROM reviews r JOIN users u ON u.id = r.user_id WHERE r.visible = true ORDER BY r.created_at DESC LIMIT 100`;
+    return await deps.sql`SELECT r.id, r.rating, r.body, r.created_at AS "createdAt",
+      CASE WHEN position(' ' IN btrim(u.name)) > 0 THEN split_part(btrim(u.name), ' ', 1) || ' ' || upper(left(split_part(btrim(u.name), ' ', 2), 1)) || '.' ELSE btrim(u.name) END AS "customerName" FROM reviews r JOIN users u ON u.id = r.user_id WHERE r.visible = true ORDER BY r.created_at DESC LIMIT 100`;
   });
 }

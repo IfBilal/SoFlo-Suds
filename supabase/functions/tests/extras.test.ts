@@ -146,4 +146,24 @@ describe('booking title', () => {
     assert.equal((await t.call('GET', '/bookings/xjNoLines', { token: 'tokA' })).json.serviceName, 'Fallback Name');
   });
 });
+describe('profile edit', () => {
+  test('is sent to the shop\'s Urable customer record', async () => {
+    const r = await t.call('PATCH', '/me', { token: 'tokA', body: { name: 'Ava Renamed Person', phone: '+13055550111' } });
+    assert.equal(r.status, 200);
+    assert.ok(t.urable.calls.some((c) => c.startsWith('updateCustomer:uA:') && c.includes('"firstName":"Ava"') && c.includes('Renamed Person')), t.urable.calls.join('|'));
+    t.urable.calls.length = 0;
+    await t.call('PATCH', '/me', { token: 'tokA', body: { notificationPromos: false } });
+    assert.ok(!t.urable.calls.some((c) => c.startsWith('updateCustomer')), 'settings-only edits do not touch Urable');
+  });
+});
+
+describe('validation messages', () => {
+  test('name the field that needs fixing instead of a generic message', async () => {
+    const bad = await t.call('POST', '/vehicles', { token: 'tokA', body: { make: 'Honda', model: 'Civic', year: 1850, color: 'Red' } });
+    assert.equal(bad.status, 400); assert.equal(bad.json.error.code, 'VALIDATION_FAILED');
+    assert.match(bad.json.error.message, /Year must be at least 1900/);
+    const empty = await t.call('POST', '/vehicles', { token: 'tokA', body: { make: '', model: 'Civic', year: 2020, color: 'Red' } });
+    assert.match(empty.json.error.message, /Make is required/);
+  });
+});
 void userB;

@@ -10,7 +10,7 @@ export interface ProtectionRecord { id: string; vehicleId: string; vehicleName: 
 export interface ShopProduct { id: string; name: string; brand?: string; category?: string; description?: string; priceCents?: number; imageUrl?: string }
 export interface GalleryProject { id: string; title: string; caption?: string; tag?: string; beforeUrl: string; afterUrl: string }
 export interface Review { id: string; rating: number; body?: string; customerName: string; createdAt: string }
-export interface ShopConfig { shopAddress?: string | null; shopPhone?: string | null; shopEmail?: string | null; mobileAreaText?: string | null; minAppVersion?: string | null; maintenanceMessage?: string | null }
+export interface ShopConfig { shopAddress?: string | null; shopPhone?: string | null; shopEmail?: string | null; mobileAreaText?: string | null; minAppVersion?: string | null; maintenanceMessage?: string | null; promoBannerText?: string | null }
 
 
 export class ApiError extends Error { constructor(readonly status: number, readonly code: string, message: string) { super(message); } }
@@ -68,7 +68,7 @@ export const endpoints = {
     const { data, error } = await supabase.rpc('shop_config');
     if (error) throw new ApiError(500, 'CONFIG_FAILED', 'Could not load shop details.');
     const c = (data ?? {}) as Record<string, string | null>;
-    return { shopAddress: c.shop_address ?? null, shopPhone: c.shop_phone ?? null, shopEmail: c.shop_email ?? null, mobileAreaText: c.mobile_area_text ?? null, minAppVersion: c.min_app_version ?? null, maintenanceMessage: c.maintenance_message ?? null };
+    return { shopAddress: c.shop_address ?? null, shopPhone: c.shop_phone ?? null, shopEmail: c.shop_email ?? null, mobileAreaText: c.mobile_area_text ?? null, minAppVersion: c.min_app_version ?? null, maintenanceMessage: c.maintenance_message ?? null, promoBannerText: c.promo_banner_text ?? null };
   },
   login: async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });

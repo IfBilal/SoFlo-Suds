@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -10,6 +11,7 @@ import { addToCalendar } from '@/lib/addToCalendar';
 import { palette as c } from '@/theme';
 
 export default function BookingScreen() {
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const { serviceId, vehicleId: requestedVehicleId } = useLocalSearchParams<{ serviceId?: string; vehicleId?: string }>();
   const [location, setLocation] = useState<'shop' | 'field'>('shop');
@@ -46,7 +48,7 @@ export default function BookingScreen() {
   }
   const selected = services.data?.find(x => x.id === serviceId);
   const selectedVehicle = vehicles.data?.find(x => x.id === vehicleId) ?? vehicles.data?.[0];
-  if (stage === 'checkout') return <View style={styles.page}><View style={styles.checkoutHeader}><Pressable onPress={() => setStage('verify')}><BrandText style={{ color: c.cyan }}>Close</BrandText></Pressable><BrandText style={{ fontWeight: '600' }}>SoFlo Suds booking</BrandText></View><UrableBookingWebView options={{ location, serviceId }} /></View>;
+  if (stage === 'checkout') return <View style={styles.page}><View style={[styles.checkoutHeader, { paddingTop: insets.top, minHeight: 62 + insets.top }]}><Pressable onPress={() => setStage('verify')}><BrandText style={{ color: c.cyan }}>Close</BrandText></Pressable><BrandText style={{ fontWeight: '600' }}>SoFlo Suds booking</BrandText></View><UrableBookingWebView options={{ location, serviceId }} /></View>;
   if (stage === 'verify') return <Screen title="Check your booking." subtitle="We’ll show your appointment when Urable confirms it.">
     <Card>
       {handoff.data?.state === 'matched' && handoff.data.booking ? <>

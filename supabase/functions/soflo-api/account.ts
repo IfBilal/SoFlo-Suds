@@ -68,6 +68,13 @@ export function accountRoutes(app: Router) {
         notification_promos = COALESCE(${input.notificationPromos ?? null}, notification_promos), updated_at = now()
       WHERE id = ${user.id} AND deleted_at IS NULL
       RETURNING id, name, email, phone, notification_appointments AS "notificationAppointments", notification_promos AS "notificationPromos"`;
+    // Keep the shop's customer record in step with the app (best effort: a Urable outage must not block the edit).
+    if ((input.name || input.phone) && user.urableCustomerId && !user.urableCustomerId.startsWith('placeholder')) {
+      const parts = (input.name ?? '').trim().split(/\s+/);
+      await deps.urable().updateCustomer(user.urableCustomerId, {
+        ...(input.name ? { firstName: parts[0], lastName: parts.slice(1).join(' ') } : {}), ...(input.phone ? { phone: input.phone } : {}),
+      }).catch(() => {});
+    }
     return row;
   });
 
