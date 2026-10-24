@@ -1,4 +1,5 @@
 import { settlePromo } from './promo.ts';
+import { releaseReward } from './extras.ts';
 import type { Deps } from './deps.ts';
 import type { UrableJob } from './urable.ts';
 import { sendPushToUser } from './push.ts';
@@ -14,6 +15,7 @@ export async function recordJob(deps: Deps, userId: string, job: UrableJob): Pro
   const vehicle = jobVehicleId(job);
   if (!vehicle) return;
   await settlePromo(deps.sql, job);
+  if (['canceled', 'cancelled'].includes(job.status.toLowerCase())) await releaseReward(deps.sql, job.id);
   const [row] = await deps.sql`SELECT soflo_private.record_job(${userId}, ${job.id}, ${vehicle}, ${job.status}, ${job.paymentStatus ?? null},
       ${job.start ? new Date(job.start) : null}, ${job.invoice?.amountPaid ?? 0}) AS r`;
   const r = row.r as { skipped?: boolean; isNew?: boolean; oldStatus?: string };

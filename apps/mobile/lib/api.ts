@@ -2,10 +2,10 @@ import { functionsBase, publicKey, supabase } from './supabase';
 
 export interface SessionUser { id: string; name: string; email: string; phone?: string; points?: number; notificationAppointments?: boolean; notificationPromos?: boolean }
 export interface Service { id: string; name: string; category: string; description?: string; priceCents?: number; durationMinutes?: number; imageUrl?: string }
-export interface Booking { id: string; serviceId?: string; vehicleId?: string; serviceName: string; vehicleName: string; scheduledAt: string; status: string; location?: string; paymentStatus?: string }
+export interface Booking { id: string; serviceId?: string; vehicleId?: string; serviceName: string; vehicleName: string; scheduledAt: string; status: string; location?: string; paymentStatus?: string; totalCents?: number; reward?: { id: string; code: string; name: string } | null; products?: Array<{ productId: string; name: string; quantity: number; priceCents: number }> }
 export interface BookingHandoff { state: 'pending' | 'ambiguous' | 'expired' | 'matched'; booking?: Booking }
 export interface Vehicle { id: string; name: string; year?: number; make?: string; model?: string; color?: string; plate?: string }
-export interface RewardSummary { points: number; rewards: Array<{ id: string; name: string; pointsCost: number; description?: string }>; activity: Array<{ id: string; label: string; delta: number; createdAt: string }>; redemptions: Array<{ id: string; code: string; status: string; name: string }>; referralCode?: string }
+export interface RewardSummary { points: number; rewards: Array<{ id: string; name: string; pointsCost: number; description?: string }>; activity: Array<{ id: string; label: string; delta: number; createdAt: string }>; redemptions: Array<{ id: string; code: string; status: string; name: string; appliedJobId?: string | null }>; referralCode?: string }
 export interface ProtectionRecord { id: string; vehicleId: string; vehicleName: string; serviceName: string; appliedOn: string; product?: string; coverage?: string; expiresOn?: string }
 export interface ShopProduct { id: string; name: string; brand?: string; category?: string; description?: string; priceCents?: number; imageUrl?: string }
 export interface GalleryProject { id: string; title: string; caption?: string; tag?: string; beforeUrl: string; afterUrl: string }
@@ -110,6 +110,11 @@ export const endpoints = {
   rewards: () => api<RewardSummary>('/rewards'),
   protection: () => api<ProtectionRecord[]>('/protection'),
   shopProducts: () => api<ShopProduct[]>('/shop/products'),
+  addProductToBooking: (bookingId: string, productId: string, quantity = 1) => api<{ name: string; asLineItem: boolean }>(`/bookings/${encodeURIComponent(bookingId)}/products`, { method: 'POST', body: JSON.stringify({ productId, quantity }) }),
+  attachReward: (bookingId: string, redemptionId: string) => api<{ code: string; name: string }>(`/bookings/${encodeURIComponent(bookingId)}/reward`, { method: 'POST', body: JSON.stringify({ redemptionId }) }),
+  nextBookingProducts: () => api<Array<{ productId: string; quantity: number }>>('/shop/next-booking'),
+  addToNextBooking: (productId: string, quantity = 1) => api<{ ok: true }>('/shop/next-booking', { method: 'POST', body: JSON.stringify({ productId, quantity }) }),
+  removeFromNextBooking: (productId: string) => api<{ ok: true }>(`/shop/next-booking/${encodeURIComponent(productId)}`, { method: 'DELETE' }),
   /** Published gallery rows straight from Postgres under RLS (column-limited grant). */
   gallery: async (): Promise<GalleryProject[]> => {
     const { data, error } = await supabase.from('gallery').select('id,title,caption,tag,before_path,after_path').order('display_order').order('id');

@@ -10,6 +10,7 @@ import type { Router } from './router.ts';
 import { reply } from './router.ts';
 import { balance } from './account.ts';
 import { promoEligible, releasePromo, reservePromo } from '../_shared/promo.ts';
+import { addProductToJob, applyNextBookingProducts, attachReward, releaseReward, resolveProduct } from '../_shared/extras.ts';
 
 const vehicleSchema = z.object({ make: z.string().trim().min(1).max(50), model: z.string().trim().min(1).max(50), year: z.number().int().min(1900).max(new Date().getFullYear() + 1), color: z.string().trim().min(1).max(50), plate: z.string().trim().max(20).optional() });
 const notes = (x: z.infer<typeof vehicleSchema>) => `Color: ${x.color}${x.plate ? `; Plate: ${x.plate}` : ''}`;
@@ -138,6 +139,7 @@ export function customerRoutes(app: Router) {
     const [link] = await deps.sql`SELECT 1 FROM job_sync WHERE user_id = ${user.id} AND urable_job_id = ${job.id}`;
     if (!link) return { state: 'ambiguous' };
     await deps.sql`UPDATE booking_handoffs SET matched_job_id = ${job.id} WHERE id = ${id} AND user_id = ${user.id} AND matched_job_id IS NULL`;
+    await applyNextBookingProducts(deps, user.id, job).catch(() => 0);
     return { state: 'matched', booking: booking(job, await bookingVehicles(deps.urable(), job, user.urableCustomerId)) };
   });
   app.get('/bookings', async ({ req, deps }) => {
@@ -162,7 +164,9 @@ export function customerRoutes(app: Router) {
   app.get('/bookings/:id', async (c) => {
     const user = await requireCustomer(c.req, c.deps); const { id } = idParam.parse(c.params);
     const job = await ownedJob(c, user, id);
-    return booking(job, await bookingVehicles(c.deps.urable(), job, user.urableCustomerId));
+    const [reward] = await c.deps.sql`SELECT rr.id, rr.code, r.name FROM reward_redemptions rr JOIN rewards r ON r.id = rr.reward_id WHERE rr.applied_job_id = ${id} AND rr.user_id = ${user.id}`;
+    const products = await c.deps.sql`SELECT product_id AS "productId", name, quantity, price_cents AS "priceCents" FROM booking_products WHERE urable_job_id = ${id} AND user_id = ${user.id} ORDER BY created_at`;
+    return { ...booking(job, await bookingVehicles(c.deps.urable(), job, user.urableCustomerId)), totalCents: job.invoice?.total, reward: reward ?? null, products };
   });
   app.post('/bookings/:id/cancel', async (c) => {
     const user = await requireCustomer(c.req, c.deps); const { id } = idParam.parse(c.params);
@@ -177,6 +181,7 @@ export function customerRoutes(app: Router) {
     }
     await c.deps.urable().cancelJob(id);
     await releasePromo(c.deps.sql, id);
+    await releaseReward(c.deps.sql, id);
     return { ok: true };
   });
   app.post('/bookings/:id/promo', async (c) => {
@@ -192,6 +197,22 @@ export function customerRoutes(app: Router) {
       await releasePromo(c.deps.sql, id); // never keep a reservation Urable did not honour
       throw e;
     }
+  });
+  app.post('/bookings/:id/reward', async (c) => {
+    const user = await requireCustomer(c.req, c.deps); const { id } = idParam.parse(c.params);
+    const { redemptionId } = z.object({ redemptionId: z.uuid() }).parse(await c.json());
+    const job = await ownedJob(c, user, id);
+    if (!promoEligible(job)) throw new HttpError(409, 'REWARD_NOT_APPLICABLE', 'Rewards can only be added before payment.');
+    return { ok: true, ...await attachReward(c.deps, user.id, job, redemptionId) };
+  });
+  app.post('/bookings/:id/products', async (c) => {
+    const user = await requireCustomer(c.req, c.deps); const { id } = idParam.parse(c.params);
+    const { productId, quantity } = z.object({ productId: z.string().min(1).max(100), quantity: z.number().int().min(1).max(10).default(1) }).parse(await c.json());
+    const job = await ownedJob(c, user, id);
+    if (!promoEligible(job)) throw new HttpError(409, 'PRODUCT_NOT_APPLICABLE', 'Products can only be added before payment.');
+    const product = await resolveProduct(c.deps, productId);
+    if (!product) throw notFound('Product');
+    return reply({ ok: true, name: product.name, ...await addProductToJob(c.deps, user.id, job, product, quantity) }, 201);
   });
   app.post('/bookings/:id/review', async (c) => {
     const user = await requireCustomer(c.req, c.deps); const { id } = idParam.parse(c.params);
@@ -231,7 +252,7 @@ export function customerRoutes(app: Router) {
       balance(deps, user.id),
       sql`SELECT id, name, description, points_cost AS "pointsCost" FROM rewards WHERE active = true ORDER BY points_cost`,
       sql`SELECT id, reason AS label, delta, created_at AS "createdAt" FROM points_ledger WHERE user_id = ${user.id} ORDER BY created_at DESC LIMIT 100`,
-      sql`SELECT rr.id, rr.code, rr.status, r.name FROM reward_redemptions rr JOIN rewards r ON r.id = rr.reward_id WHERE rr.user_id = ${user.id} ORDER BY rr.created_at DESC`,
+      sql`SELECT rr.id, rr.code, rr.status, rr.applied_job_id AS "appliedJobId", r.name FROM reward_redemptions rr JOIN rewards r ON r.id = rr.reward_id WHERE rr.user_id = ${user.id} ORDER BY rr.created_at DESC`,
     ]);
     return { points, rewards, activity, redemptions, referralCode: user.referralCode };
   });
@@ -296,6 +317,23 @@ export function customerRoutes(app: Router) {
     const products = (await deps.urable().listShopProducts()).filter((x) => !/gift\s*cards?/i.test(x.name));
     if (products.length) return products.map((x) => ({ id: x.id, name: x.name, category: x.categoryName, priceCents: x.prices?.[0]?.value }));
     return await deps.sql`SELECT id, name, brand, category, description, price_cents AS "priceCents" FROM shop_products WHERE active = true ORDER BY name`;
+  });
+  app.get('/shop/next-booking', async ({ req, deps }) => {
+    const user = await requireCustomer(req, deps);
+    return await deps.sql`SELECT product_id AS "productId", quantity FROM next_booking_products WHERE user_id = ${user.id} ORDER BY created_at`;
+  });
+  app.post('/shop/next-booking', async (c) => {
+    const user = await requireCustomer(c.req, c.deps);
+    const { productId, quantity } = z.object({ productId: z.string().min(1).max(100), quantity: z.number().int().min(1).max(10).default(1) }).parse(await c.json());
+    if (!(await resolveProduct(c.deps, productId))) throw notFound('Product');
+    await c.deps.sql`INSERT INTO next_booking_products (user_id, product_id, quantity) VALUES (${user.id}, ${productId}, ${quantity})
+      ON CONFLICT (user_id, product_id) DO UPDATE SET quantity = EXCLUDED.quantity`;
+    return reply({ ok: true }, 201);
+  });
+  app.delete('/shop/next-booking/:id', async (c) => {
+    const user = await requireCustomer(c.req, c.deps); const { id } = idParam.parse(c.params);
+    await c.deps.sql`DELETE FROM next_booking_products WHERE user_id = ${user.id} AND product_id = ${id}`;
+    return { ok: true };
   });
   app.get('/gallery', async ({ req, deps }) => {
     await requireCustomer(req, deps);

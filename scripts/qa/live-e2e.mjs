@@ -18,7 +18,7 @@ const urable = async (method, path, body) => { const r = await fetch(URABLE + pa
 const admin = createClient(U, S, { auth: { persistSession: false } });
 const anon = createClient(U, K, { auth: { persistSession: false } });
 const email = `e2e.${Date.now()}@example.com`, password = 'Test-Pass-' + Math.random().toString(36).slice(2, 10) + 'Aa1!';
-let attemptId, dupJobId, tok, adminTok, authId, userId, jobId, promoId, vehicleId, services;
+let attemptId, dupJobId, tok, adminTok, authId, userId, jobId, promoId, vehicleId, services, rewardId, noteProductId, lineProductId;
 
 await step('create confirmed TEST auth user (stands in for the email-link click)', async () => {
   const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { name: 'TEST Markhor E2E', phone: '+13055550142' } });
@@ -62,6 +62,18 @@ await step('create a far-future unpaid TEST job in Urable (stands in for the vir
   expect(r.status === 200 && r.json?.success, JSON.stringify(r)); jobId = r.json.data.id; return `${svc.name} $${(svc.priceCents / 100).toFixed(2)}`;
 });
 await step('job shows in My bookings as scheduled/unpaid', async () => { const r = await call(tok, 'GET', '/bookings'); const b = r.json.find((x) => x.id === jobId); expect(b && b.status === 'scheduled', JSON.stringify(r.json).slice(0, 300)); return `status ${b.status}, payment ${b.paymentStatus}`; });
+await step('ADMIN creates TEST shop products (one note-only, one linked to a real Urable service) and a TEST reward', async () => {
+  let r = await call(adminTok, 'POST', '/admin/shop-products', { name: 'TEST Spray Wax', priceCents: 1999 }); expect(r.status === 201, JSON.stringify(r)); noteProductId = r.json.id;
+  const cheap = services.filter((x) => x.priceCents > 0).sort((a, b) => a.priceCents - b.priceCents)[1];
+  r = await call(adminTok, 'POST', '/admin/shop-products', { name: 'TEST Linked Item', priceCents: cheap.priceCents, urableProductId: cheap.id }); expect(r.status === 201, JSON.stringify(r)); lineProductId = r.json.id;
+  r = await call(adminTok, 'POST', '/admin/rewards', { name: 'TEST Free Interior Refresh', pointsCost: 5 }); expect(r.status === 201, JSON.stringify(r)); rewardId = r.json.id;
+  return 'cheap linked service $' + (cheap.priceCents / 100).toFixed(2);
+});
+await step('Shop: customer sees the products and saves one for the NEXT booking', async () => {
+  const list = await call(tok, 'GET', '/shop/products'); expect(list.json.some((x) => x.id === noteProductId), 'product missing from shop');
+  let r = await call(tok, 'POST', '/shop/next-booking', { productId: noteProductId, quantity: 2 }); expect(r.status === 201, JSON.stringify(r));
+  r = await call(tok, 'GET', '/shop/next-booking'); expect(r.json.length === 1 && r.json[0].quantity === 2, JSON.stringify(r.json));
+});
 await step('virtual-shop checkout simulated: duplicate Urable customer + job → handoff links it to the right user', async () => {
   const fresh = await call(tok, 'POST', '/bookings/handoff'); expect(fresh.status === 201, JSON.stringify(fresh)); attemptId = fresh.json.attemptId; // a new checkout starts a new attempt
   const dc = await urable('POST', '/customers', { firstName: 'TEST', lastName: 'Markhor E2E dup', emails: [{ label: 'Email', value: email }], origin: 'QA virtual shop simulation' });
@@ -73,6 +85,11 @@ await step('virtual-shop checkout simulated: duplicate Urable customer + job →
   const r = await call(tok, 'GET', '/bookings/handoff/' + attemptId); expect(r.status === 200 && r.json.state === 'matched' && r.json.booking.id === dupJobId, JSON.stringify(r.json).slice(0, 300));
   return `matched ${r.json.booking.status}/${r.json.booking.paymentStatus}`;
 });
+await step('the saved "next booking" product was added to the matched booking and the list cleared', async () => {
+  const j = (await urable('GET', '/jobs/' + dupJobId)).json.data; expect(/SOFLO SHOP PRODUCT: TEST Spray Wax x2/.test(j.notes ?? ''), 'note missing: ' + (j.notes ?? '').slice(0, 200));
+  const r = await call(tok, 'GET', '/shop/next-booking'); expect(r.json.length === 0, 'list not cleared');
+  const d = await call(tok, 'GET', '/bookings/' + dupJobId); expect(d.json.products?.[0]?.name === 'TEST Spray Wax', JSON.stringify(d.json).slice(0, 300));
+});
 await step('another customer cannot see it', async () => { const e2 = `e2e.b.${Date.now()}@example.com`; const { data } = await admin.auth.admin.createUser({ email: e2, password, email_confirm: true, user_metadata: { name: 'TEST Other' } }); const s = await createClient(U, K, { auth: { persistSession: false } }).auth.signInWithPassword({ email: e2, password }); const r = await call(s.data.session.access_token, 'GET', '/bookings/' + jobId); expect(r.status === 401 || r.status === 404, 'status ' + r.status); await admin.auth.admin.deleteUser(data.user.id); });
 await step('REAL promo applied to the Urable invoice (10% off)', async () => {
   const before = (await urable('GET', '/jobs/' + jobId)).json.data.invoice;
@@ -82,10 +99,32 @@ await step('REAL promo applied to the Urable invoice (10% off)', async () => {
   return `subtotal ${before.subtotal} → total ${after.total} (reported discount ${r.json.discountCents})`;
 });
 await step('a second code on the same booking is refused', async () => { const r = await call(tok, 'POST', `/bookings/${jobId}/promo`, { code: process.env.E2E_CODE }); expect(r.json?.error?.code === 'PROMO_ALREADY_USED', JSON.stringify(r)); });
+await step('REAL reward: points → redeem → attach to the Urable booking (shop sees it in the job notes)', async () => {
+  await admin.from('points_ledger').insert({ user_id: userId, delta: 10, reason: 'admin_adjust', source_key: 'e2e-' + Date.now() });
+  const rd = await call(tok, 'POST', `/rewards/${rewardId}/redeem`); expect(rd.status === 200 || rd.status === 201, JSON.stringify(rd));
+  const at = await call(tok, 'POST', `/bookings/${jobId}/reward`, { redemptionId: rd.json.id }); expect(at.status === 200, JSON.stringify(at));
+  const j = (await urable('GET', '/jobs/' + jobId)).json.data; expect((j.notes ?? '').includes('SOFLO REWARD ' + rd.json.code), 'note missing: ' + (j.notes ?? '').slice(0, 200));
+  const d = await call(tok, 'GET', '/bookings/' + jobId); expect(d.json.reward?.code === rd.json.code, 'detail missing reward');
+  const again = await call(tok, 'POST', `/bookings/${jobId}/reward`, { redemptionId: rd.json.id }); expect(again.status === 409, 'second attach allowed: ' + again.status);
+  const adm = await call(adminTok, 'GET', '/admin/redemptions'); expect(adm.json.some((x) => x.code === rd.json.code && x.appliedJobId === jobId), 'admin cannot see the booking');
+});
+await step('REAL product (note-only) added to the booking → job notes updated', async () => {
+  const r = await call(tok, 'POST', `/bookings/${jobId}/products`, { productId: noteProductId, quantity: 1 }); expect(r.status === 201 && r.json.asLineItem === false, JSON.stringify(r));
+  const j = (await urable('GET', '/jobs/' + jobId)).json.data; expect(/SOFLO SHOP PRODUCT: TEST Spray Wax x1/.test(j.notes ?? ''), 'note missing');
+});
+await step('REAL product linked to Urable → becomes an invoice line and keeps the promo discount', async () => {
+  const before = (await urable('GET', '/jobs/' + jobId)).json.data.invoice;
+  const r = await call(tok, 'POST', `/bookings/${jobId}/products`, { productId: lineProductId }); expect(r.status === 201 && r.json.asLineItem === true, JSON.stringify(r));
+  const after = (await urable('GET', '/jobs/' + jobId)).json.data.invoice;
+  expect(after.subtotal > before.subtotal, `subtotal not increased ${before.subtotal} → ${after.subtotal}`);
+  expect((after.adjustments?.length ?? 0) >= (before.adjustments?.length ?? 0) && after.total < after.subtotal, 'discount lost: ' + JSON.stringify({ before, after }).slice(0, 300));
+  return `subtotal ${before.subtotal} → ${after.subtotal}, total ${before.total} → ${after.total}`;
+});
 await step('cancel the booking through the app; Urable shows canceled; promo released', async () => {
   const r = await call(tok, 'POST', `/bookings/${jobId}/cancel`); expect(r.status === 200, JSON.stringify(r));
   const j = (await urable('GET', '/jobs/' + jobId)).json.data; expect(['canceled', 'cancelled'].includes(j.status), 'Urable status ' + j.status);
   const { data } = await admin.from('promo_uses').select('status').eq('urable_job_id', jobId); expect(data.every((x) => x.status === 'released'), JSON.stringify(data));
+  const { data: rr } = await admin.from('reward_redemptions').select('applied_job_id').eq('user_id', userId); expect(rr.every((x) => x.applied_job_id === null), 'reward still attached after cancel');
 });
 await step('delete account → profile gone, token dead', async () => { const r = await call(tok, 'DELETE', '/me'); expect(r.status === 200 || r.status === 204, JSON.stringify(r)); await new Promise((x) => setTimeout(x, 1500)); const m = await call(tok, 'GET', '/me'); expect(m.status === 401, 'token still works: ' + m.status); });
 
@@ -95,7 +134,9 @@ if (jobId) await urable('PATCH', '/jobs/' + jobId, { status: 'canceled', cancele
 if (promoId) { await admin.from('promo_uses').delete().eq('promo_id', promoId); await admin.from('promo_codes').delete().eq('id', promoId); }
 await admin.from('promo_attempts').delete().eq('user_id', userId ?? '00000000-0000-0000-0000-000000000000');
 await admin.from('settings').delete().eq('key', 'maintenance_message');
-if (userId) { for (const t of ['booking_handoffs', 'job_sync', 'points_ledger', 'reward_redemptions', 'reviews', 'push_tokens']) await admin.from(t).delete().eq('user_id', userId); await admin.from('referrals').delete().or(`referrer_id.eq.${userId},referee_id.eq.${userId}`); await admin.from('users').delete().eq('id', userId); }
+if (userId) { for (const t of ['booking_handoffs', 'job_sync', 'points_ledger', 'reward_redemptions', 'booking_products', 'next_booking_products', 'reviews', 'push_tokens']) await admin.from(t).delete().eq('user_id', userId); await admin.from('referrals').delete().or(`referrer_id.eq.${userId},referee_id.eq.${userId}`); await admin.from('users').delete().eq('id', userId); }
+if (rewardId) await admin.from('rewards').delete().eq('id', rewardId);
+for (const id of [noteProductId, lineProductId]) if (id) await admin.from('shop_products').delete().eq('id', id);
 if (authId) await admin.auth.admin.deleteUser(authId).catch(() => {});
 for (const [s, n, d] of results) console.log(`${s}  ${n}${d ? '  — ' + d : ''}`);
 console.log(`\n${results.length - failed}/${results.length} passed`);

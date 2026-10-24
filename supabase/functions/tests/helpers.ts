@@ -44,6 +44,13 @@ export class FakeUrable {
     const sub = job.invoice?.subtotal ?? 0; const off = d.percent ? Math.round(sub * d.value / 100) : d.value;
     return Promise.resolve({ ...job, invoice: { ...job.invoice, total: sub - off } });
   }
+  failNote = false;
+  appendNote(job: UrableJob, line: string) {
+    this.calls.push(`note:${job.id}:${line.split(':')[0]}`);
+    if (this.failNote) return Promise.reject(Object.assign(new Error('urable down'), { status: 503 }));
+    job.notes = [job.notes, line].filter(Boolean).join('\n'); return Promise.resolve(job);
+  }
+  addLineItem(job: UrableJob, productServiceId: string, quantity: number) { this.calls.push(`line:${job.id}:${productServiceId}:${quantity}`); return Promise.resolve(job); }
   cancelJob(id: string) { this.calls.push('cancelJob:' + id); return Promise.resolve(); }
   findCustomersByEmail(email: string) { return Promise.resolve(this.customers.filter((c) => customerHasEmail(c, email))); }
 }

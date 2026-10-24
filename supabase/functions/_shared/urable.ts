@@ -53,6 +53,7 @@ export interface UrableJob {
   itemRefs?: string[];
   status: string;
   paymentStatus?: string;
+  notes?: string;
   start?: number; // Unix milliseconds
   completedAt?: number; // Unix milliseconds
   created?: number | { timestamp?: number; uid?: string | null }; // live Urable sends the object form; ms either way
@@ -252,6 +253,25 @@ export class UrableClient {
     if (!lineItems.length) throw new UrableError(422, 'Job has no line items to discount');
     const result = await this.request<UrableItem<UrableJob>>('PATCH', `/jobs/${encodeURIComponent(job.id)}`, {
       lineItems, adjustments: [...(job.invoice?.adjustments ?? []), { type: 'discount', value: discount.value, percent: discount.percent }],
+    });
+    return result.data;
+  }
+
+  /** Append a line to the job notes (Handbook Fallback C: the shop sees it on the job). */
+  async appendNote(job: UrableJob, line: string): Promise<UrableJob> {
+    const notes = [job.notes?.trim(), line].filter(Boolean).join('\n');
+    const result = await this.request<UrableItem<UrableJob>>('PATCH', `/jobs/${encodeURIComponent(job.id)}`, { notes });
+    return result.data;
+  }
+
+  /** Add a Urable product/service to an existing job, keeping its lines and any discount. */
+  async addLineItem(job: UrableJob, productServiceId: string, quantity: number): Promise<UrableJob> {
+    const current = Object.values(job.invoice?.items ?? {}).flat().map((i) => ({
+      productServiceId: i.productServiceId ?? i.productServiceRef ?? i.service?.id ?? i.product?.id ?? i.productRef ?? '', quantity: i.quantity ?? 1,
+    })).filter((i) => i.productServiceId);
+    if (!current.length) throw new UrableError(422, 'Job has no line items to extend');
+    const result = await this.request<UrableItem<UrableJob>>('PATCH', `/jobs/${encodeURIComponent(job.id)}`, {
+      lineItems: [...current, { productServiceId, quantity }], adjustments: job.invoice?.adjustments ?? [],
     });
     return result.data;
   }

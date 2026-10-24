@@ -94,7 +94,7 @@ export function adminRoutes(app: Router) {
   crud('/admin/rewards', 'reward', rewardSchema,
     (d, x) => d.sql`INSERT INTO rewards (name,description,points_cost,active) VALUES (${x.name},${x.description},${x.pointsCost},${x.active}) RETURNING id`,
     (d, id, x) => d.sql`UPDATE rewards SET name=${x.name},description=${x.description},points_cost=${x.pointsCost},active=${x.active} WHERE id=${id} RETURNING id`);
-  listOf('/admin/redemptions', (d) => d.sql`SELECT rr.id, rr.code, rr.status, rr.created_at AS "createdAt", r.name AS "rewardName", u.email AS "customerEmail" FROM reward_redemptions rr JOIN rewards r ON r.id = rr.reward_id JOIN users u ON u.id = rr.user_id ORDER BY rr.created_at DESC LIMIT 300`);
+  listOf('/admin/redemptions', (d) => d.sql`SELECT rr.id, rr.code, rr.status, rr.applied_job_id AS "appliedJobId", rr.created_at AS "createdAt", r.name AS "rewardName", u.email AS "customerEmail" FROM reward_redemptions rr JOIN rewards r ON r.id = rr.reward_id JOIN users u ON u.id = rr.user_id ORDER BY rr.created_at DESC LIMIT 300`);
   app.post('/admin/redemptions/:id/use', admin(async ({ deps, params }, a) => {
     const { id } = uuid.parse(params);
     const [r] = await deps.sql`UPDATE reward_redemptions SET status='used', used_at=now() WHERE id=${id} AND status='available' RETURNING id`;
