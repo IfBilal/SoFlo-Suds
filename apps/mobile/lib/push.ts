@@ -15,7 +15,7 @@ export async function enablePushNotifications(): Promise<'enabled' | 'denied' | 
   const current = await Notifications.getPermissionsAsync();
   const permission = current.granted ? current : await Notifications.requestPermissionsAsync();
   if (!permission.granted) return 'denied';
-  const projectId = Constants.easConfig?.projectId;
+  const projectId = Constants.easConfig?.projectId ?? (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId;
   if (!projectId) return 'unavailable';
   const token = await Notifications.getExpoPushTokenAsync({ projectId });
   await api('/me/push-token', { method: 'PUT', body: JSON.stringify({ token: token.data, platform: Platform.OS }) });

@@ -29,8 +29,10 @@ function booking(job: UrableJob, vehicles: UrableVehicle[]) {
   const vehicle = vehicles.find((v) => job.itemRefs?.some((ref) => refMatches(ref, v.id)));
   const line = Object.values(job.invoice?.items ?? {}).flat().find((i) => i.service?.id || i.productServiceId || i.productServiceRef);
   const serviceRef = line?.service?.id ?? line?.productServiceId ?? line?.productServiceRef;
+  // Urable names the job after the vehicle; the booked service(s) are on the invoice lines.
+  const lineNames = Object.values(job.invoice?.items ?? {}).flat().map((i) => i.service?.name ?? i.product?.name).filter((n): n is string => !!n);
   return {
-    id: job.id, serviceId: serviceRef?.split('/').at(-1), vehicleId: vehicle?.id, serviceName: job.name || `Job ${job.num ?? ''}`.trim(), vehicleName: vehicle?.name ?? 'Vehicle',
+    id: job.id, serviceId: serviceRef?.split('/').at(-1), vehicleId: vehicle?.id, serviceName: lineNames.length ? [...new Set(lineNames)].join(', ') : job.name || `Job ${job.num ?? ''}`.trim(), vehicleName: vehicle?.name ?? 'Vehicle',
     scheduledAt: job.start ? new Date(job.start).toISOString() : '', status: job.status, paymentStatus: job.paymentStatus, location: job.type === 'field' ? 'Mobile service' : 'In-shop service',
   };
 }

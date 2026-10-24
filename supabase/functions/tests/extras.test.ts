@@ -137,4 +137,13 @@ describe('add to next booking', () => {
     assert.equal((await t.call('GET', '/shop/next-booking', { token: 'tokA' })).json.length, 1);
   });
 });
+describe('booking title', () => {
+  test('shows the booked service from the invoice lines, not the vehicle-named job', async () => {
+    t.urable.jobs.push(job('xjName', { name: '2020 Honda Civic', invoice: { subtotal: 100, total: 100, items: { a: [{ productServiceId: 's1', service: { id: 's1', name: 'Full Detail', type: 'service' }, quantity: 1 }] } } }) as never);
+    const r = await t.call('GET', '/bookings/xjName', { token: 'tokA' });
+    assert.equal(r.json.serviceName, 'Full Detail');
+    t.urable.jobs.push(job('xjNoLines', { name: 'Fallback Name', invoice: { subtotal: 100, items: {} } }) as never);
+    assert.equal((await t.call('GET', '/bookings/xjNoLines', { token: 'tokA' })).json.serviceName, 'Fallback Name');
+  });
+});
 void userB;
