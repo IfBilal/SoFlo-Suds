@@ -79,6 +79,14 @@ export async function setup() {
     auth: {
       setAppMetadata: (id, meta) => { authCalls.push('meta:' + id); for (const i of Object.values(identities)) if (i.id === id) Object.assign(i.appMetadata, meta); return Promise.resolve(); },
       deleteUser: (id) => { authCalls.push('delete:' + id); return Promise.resolve(); },
+      signIn: (email, password) => {
+        authCalls.push('signin:' + email);
+        if (email === 'unconfirmed@t.test') return Promise.resolve({ error: { code: 'email_not_confirmed' } });
+        if (email === 'broken@t.test') return Promise.resolve({ error: { code: 'unexpected_failure' } });
+        return Promise.resolve(email === 'a@t.test' && password === 'right-password'
+          ? { session: { access_token: 'acc', refresh_token: 'ref', expires_in: 900, token_type: 'bearer' } }
+          : { error: { code: 'invalid_credentials' } });
+      },
     },
     storage: { uploadGallery: (path) => Promise.resolve(`https://storage.example.test/gallery/${path}`) },
     push: (m) => { if (state.pushFails) return Promise.reject(new Error('down')); pushed.push(m); return Promise.resolve(m.map((_x, i) => ({ status: 'ok', id: `tk${pushed.length}-${i}` }))); },

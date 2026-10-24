@@ -44,6 +44,7 @@ The mobile app uses Expo SDK 57 for Expo Go 57.x on Android. After changing SDK 
 ## Build and release
 
 - Android APK: `cd apps/mobile && npx eas-cli build --platform android --profile preview` (package `com.soflosuds.app`, EAS project `@bilal06/soflo-suds`). Store builds use `--profile production` once the client's Play/Apple accounts exist.
+- Edge Functions: `soflo-api` (needs a user JWT), `soflo-auth` (public, rate-limited login; deploy with `--no-verify-jwt`) and `cron-worker`.
 - Admin: `npm run build -w apps/admin`, then deploy the output to Vercel (Git builds are disabled by `vercel.json`).
 - Database: migrations in `supabase/migrations` are applied in order (each has a rollback in `supabase/rollback`; `supabase/tests/rollback.test.ts` drills them). Functions: `supabase functions deploy soflo-api` and `cron-worker` with `--use-api`.
 - Settings the owner can change without a new build (admin > Settings): shop address/phone/email, mobile area text, reminder hour, cancellation window, minimum app version, maintenance message, Home promo banner, points per dollar, referral reward and monthly cap, protection categories.

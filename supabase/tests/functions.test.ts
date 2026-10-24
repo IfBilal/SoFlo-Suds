@@ -189,23 +189,10 @@ describe('delete_account and lease', () => {
   });
 });
 
-describe('login rate limit hook (handbook 7)', () => {
-  const hook = (valid: boolean, user = A) => q<{ r: { decision: string; message?: string } }>(`SELECT public.hook_password_verification_attempt($1::jsonb) r`, [JSON.stringify({ user_id: user, valid })]).then((x) => x[0].r.decision);
-  test('five wrong passwords lock the account, even for the right password, and a login before that resets the count', async () => {
-    for (let i = 0; i < 4; i++) assert.equal(await hook(false, B), 'continue');
-    assert.equal(await hook(true, B), 'continue');            // success clears the failures
-    for (let i = 0; i < 5; i++) assert.equal(await hook(false, B), 'continue');
-    assert.equal(await hook(false, B), 'reject');
-    assert.equal(await hook(true, B), 'reject');
-    assert.equal(await hook(true, A), 'continue');            // other accounts are unaffected
-  });
-  test('the lock ends after 15 minutes', async () => {
-    await q(`UPDATE login_failures SET at = now() - interval '16 minutes' WHERE user_id = $1`, [B]);
-    assert.equal(await hook(true, B), 'continue');
-  });
-  test('client roles cannot call the hook or read the failures', async () => {
-    assert.ok(await denied(as(db, 'authenticated', ids.authA, `SELECT public.hook_password_verification_attempt('{"user_id":"${A}","valid":false}'::jsonb)`)));
-    assert.ok(await denied(as(db, 'anon', null, `SELECT * FROM login_failures`)));
-    assert.ok(await denied(as(db, 'authenticated', ids.authA, `SELECT * FROM login_failures`)));
+describe('login attempts table (handbook 7)', () => {
+  test('only the server can read or write failed-login records', async () => {
+    assert.ok(await denied(as(db, 'anon', null, `SELECT * FROM login_attempts`)));
+    assert.ok(await denied(as(db, 'authenticated', ids.authA, `INSERT INTO login_attempts (email, ip) VALUES ('x@y.z','1.1.1.1')`)));
+    await q(`INSERT INTO login_attempts (email, ip) VALUES ('x@y.z','1.1.1.1')`); // the function connects as the database owner
   });
 });

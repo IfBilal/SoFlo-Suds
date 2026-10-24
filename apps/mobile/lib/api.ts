@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { functionsBase, publicKey, supabase } from './supabase';
-import { authMessage } from './authMessages';
+import { authBase, functionsBase, publicKey, supabase } from './supabase';
+import { authMessage, loginErrorMessage } from './authMessages';
 
 export interface SessionUser { id: string; name: string; email: string; phone?: string; points?: number; notificationAppointments?: boolean; notificationPromos?: boolean }
 export interface Service { id: string; name: string; category: string; description?: string; priceCents?: number; durationMinutes?: number; imageUrl?: string; tiers?: Array<{ label?: string; priceCents: number; durationMinutes?: number }>; addOns?: Array<{ id: string; name: string; priceCents?: number }> }
@@ -77,9 +77,16 @@ export const endpoints = {
     const c = (data ?? {}) as Record<string, string | null>;
     return { shopAddress: c.shop_address ?? null, shopPhone: c.shop_phone ?? null, shopEmail: c.shop_email ?? null, mobileAreaText: c.mobile_area_text ?? null, minAppVersion: c.min_app_version ?? null, maintenanceMessage: c.maintenance_message ?? null, promoBannerText: c.promo_banner_text ?? null };
   },
+  /** Login goes through the rate-limited `soflo-auth` function (5 failed attempts per 15 minutes), then the app adopts the session. */
   login: async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw authError(error, 'Email or password is incorrect.');
+    let response: Response;
+    try {
+      response = await fetch(`${authBase}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json', apikey: publicKey }, body: JSON.stringify({ email, password }) });
+    } catch { throw new ApiError(0, 'NETWORK_ERROR', 'Could not reach SoFlo Suds. Check your connection and try again.'); }
+    const payload = await response.json().catch(() => null) as { access_token?: string; refresh_token?: string; error?: { code?: string } } | null;
+    if (!response.ok || !payload?.access_token || !payload.refresh_token) throw new ApiError(response.status, payload?.error?.code ?? 'AUTH_FAILED', loginErrorMessage(payload?.error?.code));
+    const { error } = await supabase.auth.setSession({ access_token: payload.access_token, refresh_token: payload.refresh_token });
+    if (error) throw authError(error, 'Could not log in. Please try again.');
   },
   /** Creates the Auth identity. Resolves to true when a session exists (profile can be completed now). */
   signup: async (input: { name: string; email: string; phone: string; password: string; referralCode?: string }): Promise<boolean> => {

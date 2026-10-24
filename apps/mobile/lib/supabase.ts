@@ -13,6 +13,7 @@ export const supabaseConfigError = !/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(
 if (supabaseConfigError && !__DEV__) throw new Error(supabaseConfigError);
 
 export const functionsBase = `${url}/functions/v1/soflo-api`;
+export const authBase = `${url}/functions/v1/soflo-auth`;
 export const publicKey = key;
 
 // SecureStore refuses values over ~2 KB and a session JSON is larger, so values are stored in chunks.

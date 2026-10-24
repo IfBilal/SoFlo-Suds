@@ -15,3 +15,12 @@ export function authMessage(error: { code?: string; message?: string } | null | 
   if (/too many failed attempts/i.test(error?.message ?? '')) return LOGIN_LOCKED;
   return (error?.code && authMessages[error.code]) || fallback;
 }
+
+/** Wording for the codes the `soflo-auth` login endpoint returns. */
+export function loginErrorMessage(code?: string): string {
+  if (code === 'LOGIN_RATE_LIMITED') return LOGIN_LOCKED;
+  if (code === 'INVALID_CREDENTIALS') return 'Email or password is incorrect.';
+  if (code === 'EMAIL_NOT_CONFIRMED') return authMessages.email_not_confirmed;
+  if (code === 'VALIDATION_FAILED') return 'Enter a valid email and your password.';
+  return 'Could not log in. Please try again.';
+}

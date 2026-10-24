@@ -24,6 +24,13 @@ export function productionDeps(): Deps {
     auth: {
       setAppMetadata: async (id, meta) => { const { error } = await admin.auth.admin.updateUserById(id, { app_metadata: meta }); if (error) throw new Error('auth metadata update failed'); },
       deleteUser: async (id) => { const { error } = await admin.auth.admin.deleteUser(id); if (error) throw new Error('auth delete failed'); },
+      signIn: async (email, password) => {
+        const client = createClient(url, Deno.env.get('SUPABASE_ANON_KEY') ?? need('SUPABASE_PUBLISHABLE_KEY'), { auth: { persistSession: false, autoRefreshToken: false } });
+        const { data, error } = await client.auth.signInWithPassword({ email, password });
+        if (error || !data.session) return { error: { code: error?.code ?? 'unknown' } };
+        const s = data.session;
+        return { session: { access_token: s.access_token, refresh_token: s.refresh_token, expires_in: s.expires_in, expires_at: s.expires_at, token_type: s.token_type } };
+      },
     },
     storage: {
       uploadGallery: async (path, bytes, contentType) => {

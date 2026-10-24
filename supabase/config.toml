@@ -421,6 +421,11 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/soflo-api/deno.json"
 
+[functions.soflo-auth]
+enabled = true
+verify_jwt = false
+import_map = "./functions/soflo-auth/deno.json"
+
 [functions.cron-worker]
 enabled = true
 verify_jwt = false
