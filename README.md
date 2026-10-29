@@ -4,7 +4,7 @@ Expo/React Native customer app, Supabase backend, and React/Vite web admin. The 
 
 ## Current state: 24 October 2026
 
-Everything in handbook Section 1.3 that does not depend on the client or Ali is built and tested, on `main`. Customer app (Android, tested on a real phone), owner admin (https://soflo-suds-admin.vercel.app, tested in a real browser), and the Supabase backend (Auth, RLS, Edge Functions `soflo-api` and `cron-worker`, pg_cron, Storage) with the server-only Urable adapter are live. `npm run test:backend` runs the SQL/RLS tests (PGlite), the Edge Function tests (Deno, with a fake Urable) and the app tests; `scripts/qa/live-e2e.mjs` runs the same flows against the real project and real Urable (test records only, cancelled afterwards).
+Everything in handbook Section 1.3 that does not depend on the client or Ali is built and tested, on `main`. Customer app (Android, tested on a real phone), owner admin (https://soflo-suds.vercel.app, tested in a real browser), and the Supabase backend (Auth, RLS, Edge Functions `soflo-api` and `cron-worker`, pg_cron, Storage) with the server-only Urable adapter are live. `npm run test:backend` runs the SQL/RLS tests (PGlite), the Edge Function tests (Deno, with a fake Urable) and the app tests; `scripts/qa/live-e2e.mjs` runs the same flows against the real project and real Urable (test records only, cancelled afterwards).
 
 How the handbook's Urable fallbacks are used:
 - **Booking and payment (Fallback A and B):** date/time, address and payment happen in Urable's own booking page, opened in a branded in-app WebView. The new job is then read back and linked to the customer. "Paid" is shown only when Urable reports it.

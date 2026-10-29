@@ -1,1 +1,1 @@
-{ "git": { "deploymentEnabled": false } }
+{ "git": { "deploymentEnabled": false }, "installCommand": "npm install --legacy-peer-deps", "rewrites": [{ "source": "/((?!assets/).*)", "destination": "/index.html" }] }

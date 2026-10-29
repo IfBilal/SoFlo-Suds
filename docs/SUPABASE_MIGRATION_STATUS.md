@@ -72,7 +72,7 @@ mobile: npx expo-doctor  19/21; the 2 failures are Expo API lookups that timed o
 12. `apps/api`, its docs and Fastify scripts remain until Ali approves; remove at cutover only.
 
 ## Admin site (deployed 2026-10-23)
-- Hosted as a prebuilt static site on Vercel: https://soflo-suds-admin.vercel.app (project `soflo-suds-admin`). Source builds fail on Vercel (monorepo `npm install`), so deploy prebuilt: build `apps/admin`, copy `dist` to `apps/admin/.vercel/output/static`, add `config.json` with an SPA fallback, then `vercel deploy --prebuilt --prod`.
+- Hosted as a prebuilt static site on Vercel: https://soflo-suds.vercel.app (project `soflo-suds`). Source builds fail on Vercel (monorepo `npm install`), so deploy prebuilt: build `apps/admin`, copy `dist` to `apps/admin/.vercel/output/static`, add `config.json` with an SPA fallback, then `vercel deploy --prebuilt --prod`.
 - `ADMIN_ORIGINS` secret = the Vercel URL plus `http://localhost:5173`; the URL is also in the Auth redirect allow-list. CORS preflight from that origin verified.
 - Owner admin account created (the project owner's own account for now); the client's admin is added later with `scripts/supabase/bootstrap-admin.mjs`, then the owner row is set `active = false`.
 - Admin sign-in verified against the live project through the API (`GET /admin/me` returns 200); browser sign-in on the hosted site is still to be clicked through.
