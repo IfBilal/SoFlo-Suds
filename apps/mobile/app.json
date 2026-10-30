@@ -8,7 +8,11 @@
     "scheme": "soflosuds",
     "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.soflosuds.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -40,7 +44,13 @@
       "expo-font",
       "expo-secure-store",
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "SoFlo Suds adds your appointment to your calendar when you choose Add to calendar."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
