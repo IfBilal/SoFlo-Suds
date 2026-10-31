@@ -105,8 +105,9 @@ To confirm before submitting: whether Urable's booking page (inside the web view
 | --- | --- |
 | 1024 px icon | Ready: `apps/mobile/assets/images/icon.png` is 1024x1024 RGB with no alpha channel |
 | Play feature graphic 1024x500 | Not made |
-| Screenshots iPhone 6.7" (1290x2796) and 6.5" (1242x2688) | Not made; see plan below |
+| Screenshots iPhone 6.7" (1290x2796) and 6.5" (1242x2688) | Captured 1 Nov from the real app's web build, logged in to the live backend as the reviewer account. Saved outside git in `~/Desktop/SoFlo-Suds-store-screenshots/`. Strong: Home, Services, Profile. Weak (accurate empty states until the client adds content): Bookings, Protection, Gallery. Not usable: Rewards (shows the leftover test reward), Welcome (the web build shows two slides side by side, which the phone app does not) |
 | Play phone screenshots | Not made |
-| Demo reviewer account | Not created (writes to live DB; needs owner go-ahead) |
+| Demo reviewer account | Created 1 Nov 2026 (`TEST Apple Review`, no bookings, no vehicles). Login saved only in `~/.config/soflo-suds/apple-review-login.txt`. It is one more TEST customer in the client's Urable that must be deleted by hand at delivery |
+| Leftover live test reward | `TEST App QA Reward` ("QA only", 100 points) is active in the live `rewards` table and shows to real customers. Deactivate or delete before launch (needs owner OK) |
 | Apple Developer / Play Console access | **[CLIENT]** |
 | Content rating questionnaires | Answers above; submit once the accounts exist |
