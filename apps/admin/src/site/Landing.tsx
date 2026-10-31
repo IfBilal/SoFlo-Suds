@@ -113,8 +113,8 @@ function Privacy() {
       <p>Card details are entered in the secure payment step of our booking provider, Urable. The SoFlo Suds app and servers do not store full card numbers.</p>
       <h3>Sharing</h3>
       <p>We share booking and customer details with Urable so your service can be scheduled and paid. We do not sell your personal information.</p>
-      <h3>Deleting your account</h3>
-      <p>You can delete your app account at any time from Profile in the app. This removes access to your profile and anonymizes your app account. Service and payment records held by the shop may be retained where required for business and legal purposes.</p>
+      <h3 id="delete-account">Deleting your account</h3>
+      <p>To delete your account, open the SoFlo Suds app, go to Profile, choose Delete account and confirm. Your login is removed immediately and your profile is anonymized, which ends your access to your vehicles, rewards and referral activity in the app. Your push notification token is removed with it. Service and payment records held by the shop may be retained where required for business and legal purposes. If you can no longer open the app, contact the shop and ask for your SoFlo Suds app account to be deleted.</p>
       <h3>Contact</h3>
       <p>Questions about your data? Use Contact in the app’s Profile screen to reach the shop.</p>
     </div>

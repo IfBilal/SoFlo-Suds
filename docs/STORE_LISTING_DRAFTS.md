@@ -97,7 +97,7 @@ To confirm before submitting: whether Urable's booking page (inside the web view
 - Users can request deletion: Yes, in-app (Profile > Delete account) and via the privacy policy contact.
 - Data collection is optional?: Account details are required to use the app; push notifications are optional.
 - No ads, no data sold, no location, no contacts, no photos, no financial info stored.
-- Account deletion URL (Play requires a web path): needs a page or section on the shop's site. The public site currently documents in-app deletion only. **Decision for the owner:** add a short "Delete your account" section to the site's `#privacy` block.
+- Account deletion URL (Play requires a web path): needs a page or section on the shop's site. The public site currently documents in-app deletion only. Done 1 Nov 2026: the `#privacy` section now has step-by-step deletion text, deployed. Use https://soflo-suds.vercel.app/#delete-account as the Play deletion URL.
 
 ## 5. Other store tasks (status)
 
@@ -108,6 +108,6 @@ To confirm before submitting: whether Urable's booking page (inside the web view
 | Screenshots iPhone 6.7" (1290x2796) and 6.5" (1242x2688) | Captured 1 Nov from the real app's web build, logged in to the live backend as the reviewer account. Saved outside git in `~/Desktop/SoFlo-Suds-store-screenshots/`. Strong: Home, Services, Profile. Weak (accurate empty states until the client adds content): Bookings, Protection, Gallery. Not usable: Rewards (shows the leftover test reward), Welcome (the web build shows two slides side by side, which the phone app does not) |
 | Play phone screenshots | Not made |
 | Demo reviewer account | Created 1 Nov 2026 (`TEST Apple Review`, no bookings, no vehicles). Login saved only in `~/.config/soflo-suds/apple-review-login.txt`. It is one more TEST customer in the client's Urable that must be deleted by hand at delivery |
-| Leftover live test reward | `TEST App QA Reward` ("QA only", 100 points) is active in the live `rewards` table and shows to real customers. Deactivate or delete before launch (needs owner OK) |
+| Leftover live test reward | `TEST App QA Reward` deactivated 1 Nov 2026 (`active = false`, row kept; re-enable in admin or SQL if needed). Rewards screen is empty until the client supplies rewards |
 | Apple Developer / Play Console access | **[CLIENT]** |
 | Content rating questionnaires | Answers above; submit once the accounts exist |
