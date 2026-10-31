@@ -104,8 +104,8 @@ To confirm before submitting: whether Urable's booking page (inside the web view
 | Item | Status |
 | --- | --- |
 | 1024 px icon | Ready: `apps/mobile/assets/images/icon.png` is 1024x1024 RGB with no alpha channel |
-| Play feature graphic 1024x500 | Not made |
-| Screenshots iPhone 6.7" (1290x2796) and 6.5" (1242x2688) | Captured 1 Nov from the real app's web build, logged in to the live backend as the reviewer account. Saved outside git in `~/Desktop/SoFlo-Suds-store-screenshots/`. Strong: Home, Services, Profile. Weak (accurate empty states until the client adds content): Bookings, Protection, Gallery. Not usable: Rewards (shows the leftover test reward), Welcome (the web build shows two slides side by side, which the phone app does not) |
+| Play feature graphic 1024x500 | Made 1 Nov (logo, tagline, app hero photo; no third-party badges). Saved outside git: `~/Desktop/SoFlo-Suds-store-screenshots/play-feature-graphic-1024x500.png` |
+| Screenshots iPhone 6.7" (1290x2796) and 6.5" (1242x2688) | Captured 1 Nov from the real app's web build, logged in to the live backend as the reviewer account. Saved outside git in `~/Desktop/SoFlo-Suds-store-screenshots/`. Usable: Home, Services, Rewards (clean "coming soon" state after the test reward was hidden), Profile. Weak (accurate empty states until the client adds content): Bookings, Protection, Gallery. Welcome was dropped (the web build shows two slides side by side, which the phone app does not). Retake these from a real iPhone once one is available |
 | Play phone screenshots | Not made |
 | Demo reviewer account | Created 1 Nov 2026 (`TEST Apple Review`, no bookings, no vehicles). Login saved only in `~/.config/soflo-suds/apple-review-login.txt`. It is one more TEST customer in the client's Urable that must be deleted by hand at delivery |
 | Leftover live test reward | `TEST App QA Reward` deactivated 1 Nov 2026 (`active = false`, row kept; re-enable in admin or SQL if needed). Rewards screen is empty until the client supplies rewards |

@@ -2,7 +2,11 @@
 
 Expo/React Native customer app, Supabase backend, and React/Vite web admin. The [Developer Handbook](docs/SoFlo%20Suds%20-%20Developer%20Handbook.pdf) decides scope. The [concept-to-product specification](docs/CONCEPT_TO_PRODUCT_SPEC.md) documents the client HTML's design and interaction language. The [implementation plan](docs/IMPLEMENTATION_PLAN.md) has the delivery sequence and exit gates.
 
-## Current state: 24 October 2026
+## Current state: 1 November 2026
+
+Since 24 Oct: a public one-page site at `/` (admin sign-in moved to `/login`, Vercel project `soflo-suds`), iOS config (bundle id `com.soflosuds.app`, phone-only, calendar permission text, `ios-simulator` EAS profile; compiles, never run on a device), and store drafts in [STORE_LISTING_DRAFTS.md](docs/STORE_LISTING_DRAFTS.md). The latest Android APK predates the `soflo-auth` login and billing changes; a new build is made only on request.
+
+### As of 24 October 2026
 
 Everything in handbook Section 1.3 that does not depend on the client or Ali is built and tested, on `main`. Customer app (Android, tested on a real phone), owner admin (https://soflo-suds.vercel.app, tested in a real browser), and the Supabase backend (Auth, RLS, Edge Functions `soflo-api` and `cron-worker`, pg_cron, Storage) with the server-only Urable adapter are live. `npm run test:backend` runs the SQL/RLS tests (PGlite), the Edge Function tests (Deno, with a fake Urable) and the app tests; `scripts/qa/live-e2e.mjs` runs the same flows against the real project and real Urable (test records only, cancelled afterwards).
 
